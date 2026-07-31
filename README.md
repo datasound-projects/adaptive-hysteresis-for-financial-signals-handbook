@@ -1,4 +1,6 @@
-#
+Site : https://datasound-projects.github.io/adaptive-hysteresis-for-financial-signals-handbook/
+
+
 ## Schmitt Trigger for Robust Trading Signal Generation
 
 ### Overview
