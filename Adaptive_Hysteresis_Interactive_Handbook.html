@@ -1,0 +1,2743 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Adaptive Hysteresis for Financial Signals — Interactive Handbook</title>
+<meta content="End-to-end handbook and implementation project for Schmitt-trigger-style hysteresis in financial time series." name="description"/>
+<style>
+:root {
+  --page: #f4f7f3;
+  --surface: #ffffff;
+  --surface-2: #edf3f1;
+  --surface-3: #eef3f7;
+  --ink: #24363b;
+  --muted: #64777a;
+  --line: #d7e2df;
+  --accent: #54798a;
+  --accent-2: #789b83;
+  --accent-3: #c88d5d;
+  --good: #4f8b68;
+  --warn: #b47a42;
+  --danger: #a65d61;
+  --shadow: 0 12px 34px rgba(42, 68, 70, 0.09);
+  --radius: 18px;
+  --sidebar: 295px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.67;
+}
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+button, input { font: inherit; }
+.layout { display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); min-height: 100vh; }
+.sidebar {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 24px 20px 32px; background: #eaf0ed; border-right: 1px solid var(--line);
+}
+.brand { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; }
+.brand-mark { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #dbe9e4, #dbe7ed); border: 1px solid #cbdad5; font-weight: 800; color: var(--accent); }
+.brand strong { display: block; line-height: 1.2; }
+.brand small { color: var(--muted); }
+.search { width: 100%; padding: 10px 12px; border: 1px solid #cad8d4; border-radius: 11px; background: #f9fbfa; color: var(--ink); outline: none; }
+.search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(84, 121, 138, .13); }
+.progress-box { margin: 14px 0 18px; padding: 12px; background: rgba(255,255,255,.62); border: 1px solid var(--line); border-radius: 12px; }
+.progress-track { height: 8px; background: #dce6e2; border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .25s; }
+.progress-text { margin-top: 7px; font-size: 12px; color: var(--muted); }
+.nav-group-label { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #7d8f8d; margin: 18px 8px 7px; }
+.nav-link { display: block; color: #526668; text-decoration: none; padding: 7px 10px; margin: 2px 0; border-radius: 9px; font-size: 14px; }
+.nav-link:hover, .nav-link.active { color: #2d4a50; background: rgba(255,255,255,.78); }
+.sidebar-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 18px; }
+.small-btn { border: 1px solid #c8d7d2; background: #f8faf9; color: var(--ink); padding: 8px 9px; border-radius: 10px; cursor: pointer; }
+.main { min-width: 0; }
+.hero { padding: 72px clamp(24px, 6vw, 88px) 48px; background:
+  radial-gradient(circle at 78% 18%, rgba(120,155,131,.19), transparent 34%),
+  radial-gradient(circle at 20% 20%, rgba(84,121,138,.15), transparent 30%), #f8faf7; border-bottom: 1px solid var(--line); }
+.eyebrow { display: inline-flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 999px; background: #e8f0ed; color: #4f7061; font-size: 13px; font-weight: 700; }
+h1 { font-size: clamp(38px, 6vw, 70px); line-height: 1.04; letter-spacing: -.045em; max-width: 980px; margin: 18px 0; }
+.hero p { max-width: 830px; font-size: 19px; color: #52696b; }
+.hero-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-top: 28px; max-width: 1040px; }
+.hero-card { padding: 15px; background: rgba(255,255,255,.72); border: 1px solid var(--line); border-radius: 14px; }
+.hero-card strong { display: block; font-size: 24px; color: var(--accent); }
+.hero-card span { font-size: 13px; color: var(--muted); }
+.content { max-width: 1180px; margin: 0 auto; padding: 36px clamp(22px, 5vw, 72px) 100px; }
+.chapter { position: relative; margin: 0 0 40px; padding: 34px clamp(20px, 4vw, 48px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); scroll-margin-top: 20px; }
+.chapter-kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent-2); font-weight: 800; }
+h2 { margin: 5px 0 14px; line-height: 1.17; font-size: clamp(28px, 4vw, 42px); letter-spacing: -.025em; }
+h3 { margin: 30px 0 10px; font-size: 23px; line-height: 1.25; }
+h4 { margin: 22px 0 8px; font-size: 18px; }
+p { margin: 10px 0 15px; }
+.chapter-check { position: absolute; top: 24px; right: 24px; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; }
+.chapter-check input { width: 18px; height: 18px; accent-color: var(--accent-2); }
+.lead { font-size: 18px; color: #506567; }
+.callout { padding: 16px 18px; border-left: 4px solid var(--accent); background: var(--surface-3); border-radius: 0 12px 12px 0; margin: 18px 0; }
+.callout.good { border-color: var(--good); background: #edf5ef; }
+.callout.warn { border-color: var(--warn); background: #faf3e9; }
+.callout.danger { border-color: var(--danger); background: #f8eded; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+.card { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfb; }
+.card h3, .card h4 { margin-top: 0; }
+.card p:last-child { margin-bottom: 0; }
+.metric { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.metric:last-child { border-bottom: 0; }
+.pill { display: inline-block; border: 1px solid #cbdad5; background: #f4f8f6; padding: 3px 8px; border-radius: 999px; font-size: 12px; color: #516a65; }
+.formula { display: block; padding: 16px; border: 1px solid #d7e1e4; border-radius: 12px; background: #f4f7f9; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; overflow-x: auto; }
+.code-wrap { margin: 18px 0; border: 1px solid #d5e0e3; border-radius: 14px; overflow: hidden; background: #eef3f5; }
+.code-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #e3ecef; border-bottom: 1px solid #d3dfe2; color: #5a7076; font-size: 12px; }
+.copy-btn { border: 1px solid #c3d2d6; background: #f8fbfc; color: #40575e; padding: 4px 9px; border-radius: 8px; cursor: pointer; }
+pre { margin: 0; padding: 18px; overflow-x: auto; white-space: pre; tab-size: 4; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .91em; }
+:not(pre) > code { background: #edf2f3; padding: .12em .38em; border-radius: 5px; }
+table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px; }
+th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: #eef3f1; color: #425b5e; position: sticky; top: 0; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.table-scroll table { margin: 0; min-width: 760px; }
+ul, ol { padding-left: 22px; }
+li { margin: 6px 0; }
+.diagram { padding: 20px; border: 1px solid var(--line); background: #f8faf9; border-radius: 16px; overflow-x: auto; }
+.pipeline { display: grid; grid-template-columns: repeat(7, minmax(110px,1fr)); gap: 10px; align-items: center; min-width: 900px; }
+.pipe-node { padding: 13px 10px; text-align: center; background: white; border: 1px solid #cfdeda; border-radius: 12px; font-weight: 700; font-size: 13px; }
+.pipe-arrow { text-align: center; color: var(--accent); font-size: 20px; }
+.interactive { padding: 20px; border: 1px solid #ceded9; border-radius: 16px; background: linear-gradient(180deg,#fafcfb,#f0f5f3); }
+.controls { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin-bottom: 14px; }
+.control { padding: 12px; background: rgba(255,255,255,.8); border: 1px solid var(--line); border-radius: 12px; }
+.control label { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 700; margin-bottom: 7px; }
+.control input[type=range] { width: 100%; accent-color: var(--accent); }
+.demo-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 13px 0; }
+.demo-stat { padding: 12px; background: white; border: 1px solid var(--line); border-radius: 11px; }
+.demo-stat strong { display: block; font-size: 23px; color: var(--accent); }
+.demo-stat small { color: var(--muted); }
+#signalSvg { width: 100%; height: 360px; display: block; background: white; border: 1px solid var(--line); border-radius: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 8px; color: var(--muted); font-size: 12px; }
+.dot { width: 11px; height: 11px; display: inline-block; border-radius: 50%; margin-right: 5px; }
+.walk-grid { display: grid; gap: 8px; margin: 18px 0; }
+.fold { display: grid; grid-template-columns: 110px repeat(6,1fr); gap: 5px; align-items: center; font-size: 12px; }
+.fold-cell { height: 32px; border-radius: 6px; background: #e3e9e7; display: grid; place-items: center; }
+.fold-cell.train { background: #dbe8e3; color: #47695c; }
+.fold-cell.test { background: #dce8ee; color: #456978; }
+.fold-cell.future { background: #f1f3f2; color: #9ba7a4; }
+details { margin: 14px 0; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfb; }
+summary { cursor: pointer; padding: 13px 15px; font-weight: 750; }
+details > div { padding: 0 15px 15px; }
+.file-list a { display: block; padding: 9px 0; border-bottom: 1px solid var(--line); text-decoration: none; }
+.file-list a:last-child { border-bottom: 0; }
+.glossary-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.glossary-item { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfb; }
+.glossary-item strong { color: #3f6066; }
+.footer { text-align: center; color: var(--muted); padding: 20px 20px 55px; }
+.mobile-toggle { display: none; position: fixed; z-index: 20; left: 12px; top: 12px; border: 1px solid var(--line); background: white; border-radius: 10px; padding: 8px 10px; box-shadow: var(--shadow); }
+@media (max-width: 1050px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: fixed; z-index: 15; width: min(88vw,320px); transform: translateX(-105%); transition: transform .2s; box-shadow: var(--shadow); }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-toggle { display: block; }
+  .hero-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 720px) {
+  .hero { padding-top: 75px; }
+  .grid-2,.grid-3,.controls,.demo-stats,.glossary-grid { grid-template-columns: 1fr; }
+  .hero-grid { grid-template-columns: 1fr 1fr; }
+  .chapter-check { position: static; margin-bottom: 8px; }
+  .chapter { padding: 26px 18px; }
+}
+@media print {
+  .sidebar,.mobile-toggle,.copy-btn,.chapter-check,.interactive .controls,.sidebar-actions { display:none !important; }
+  .layout { display:block; }
+  .hero,.chapter { box-shadow:none; break-inside:avoid; }
+  .content { max-width:none; padding:20px; }
+}
+
+/* Extended interactive visual laboratories */
+.viz-panel {
+  margin: 22px 0 26px;
+  padding: 18px;
+  border: 1px solid #cddcd8;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfdfc 0%, #f0f5f3 100%);
+}
+.viz-panel h3 { margin-top: 0; }
+.viz-intro { color: var(--muted); font-size: 14px; margin-top: -4px; }
+.viz-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 13px 0;
+}
+.viz-toolbar.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.viz-control {
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255,255,255,.84);
+}
+.viz-control label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: #476064;
+  font-size: 12px;
+  font-weight: 750;
+}
+.viz-control select,
+.viz-control input[type="number"] {
+  width: 100%;
+  min-height: 37px;
+  border: 1px solid #c9d7d3;
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  padding: 7px 8px;
+}
+.viz-control input[type="range"] { width: 100%; accent-color: var(--accent); }
+.viz-canvas {
+  width: 100%;
+  height: 300px;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+.viz-canvas.tall { height: 390px; }
+.viz-canvas.short { height: 230px; }
+.compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.compare-card { padding: 12px; border: 1px solid var(--line); border-radius: 13px; background: white; min-width: 0; }
+.compare-card h4 { margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.variant-badge { font-size: 11px; color: var(--accent); font-weight: 750; }
+.viz-stats { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin: 11px 0; }
+.viz-stat { padding: 9px 10px; background: white; border: 1px solid var(--line); border-radius: 10px; }
+.viz-stat strong { display: block; color: var(--accent); font-size: 19px; line-height: 1.2; }
+.viz-stat small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.viz-note { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #eef4f2; color: #51676a; font-size: 13px; }
+.variant-table td, .variant-table th { font-size: 12px; padding: 8px 9px; }
+.variant-table tr.selected { background: #eef5f2; }
+.mini-steps { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 7px; margin: 12px 0; }
+.mini-step { border: 1px solid var(--line); background: white; border-radius: 10px; padding: 10px; font-size: 12px; cursor: pointer; }
+.mini-step.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(84,121,138,.12); }
+.toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.toggle-chip { border: 1px solid #c9d7d3; background: white; border-radius: 999px; padding: 6px 10px; cursor: pointer; font-size: 12px; color: #52686a; }
+.toggle-chip.active { background: #e7f0ed; border-color: #9db8ad; color: #355b4d; }
+.roadmap-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.roadmap-phase { padding: 13px; border: 1px solid var(--line); background: white; border-radius: 12px; }
+.roadmap-phase.done { background: #eef6f0; }
+.quiz-answer { min-height: 42px; padding: 10px 12px; border-radius: 10px; background: white; border: 1px solid var(--line); margin-top: 10px; }
+@media (max-width: 900px) {
+  .viz-toolbar, .viz-toolbar.compact { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .compare-grid { grid-template-columns: 1fr; }
+  .viz-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .mini-steps, .roadmap-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 560px) {
+  .viz-toolbar, .viz-toolbar.compact, .mini-steps, .roadmap-grid { grid-template-columns: 1fr; }
+  .viz-stats { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<button class="mobile-toggle" id="mobileToggle" type="button">Contents</button>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<div class="brand"><div class="brand-mark">H</div><div><strong>Adaptive Hysteresis</strong><small>Financial signal handbook</small></div></div>
+<input class="search" id="navSearch" placeholder="Find a chapter…" type="search"/>
+<div class="progress-box"><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><div class="progress-text" id="progressText">0 of 16 chapters completed</div></div>
+<div class="nav-group-label">Foundation</div>
+<nav id="chapterNav">
+<a class="nav-link" href="#chapter-1">1. Project definition</a>
+<a class="nav-link" href="#chapter-2">2. Interactive variant laboratory</a>
+<a class="nav-link" href="#chapter-3">3. Research design</a>
+<a class="nav-link" href="#chapter-4">4. Local setup</a>
+<a class="nav-link" href="#chapter-5">5. Market data</a>
+<a class="nav-link" href="#chapter-6">6. Data validation</a>
+<div class="nav-group-label">Signals and filters</div>
+<a class="nav-link" href="#chapter-7">7. Signal contract</a>
+<a class="nav-link" href="#chapter-8">8. MA baseline</a>
+<a class="nav-link" href="#chapter-9">9. Hysteresis variants</a>
+<a class="nav-link" href="#chapter-10">10. Non-MA strategies</a>
+<div class="nav-group-label">Optimization</div>
+<a class="nav-link" href="#chapter-11">11. Objectives and metrics</a>
+<a class="nav-link" href="#chapter-12">12. Optuna correctly</a>
+<a class="nav-link" href="#chapter-13">13. Backtesting</a>
+<a class="nav-link" href="#chapter-14">14. Visual analysis</a>
+<div class="nav-group-label">Delivery</div>
+<a class="nav-link" href="#chapter-15">15. Development roadmap</a>
+<a class="nav-link" href="#chapter-16">16. Errors, glossary, sources</a>
+</nav>
+<div class="sidebar-actions"><button class="small-btn" id="printBtn" type="button">Print / PDF</button><button class="small-btn" id="resetBtn" type="button">Reset progress</button></div>
+</aside>
+<main class="main">
+<header class="hero">
+<span class="eyebrow">Interactive implementation handbook</span>
+<h1>Adaptive Hysteresis for Financial Signals</h1>
+<p>Learn how to convert noisy continuous market measurements into stable states, optimize the thresholds without cheating, and evaluate whether the filter improves signal quality before treating it as a trading strategy.</p>
+<div class="hero-grid">
+<div class="hero-card"><strong>4</strong><span>MA baselines in parallel</span></div>
+<div class="hero-card"><strong>9</strong><span>interactive hysteresis variants</span></div>
+<div class="hero-card"><strong>3</strong><span>non-MA signal families implemented</span></div>
+<div class="hero-card"><strong>1</strong><span>complete local research project</span></div>
+</div>
+</header>
+<div class="content">
+<section class="chapter" data-chapter="1" id="chapter-1">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 1</div><h2>What you are building</h2>
+<p class="lead">This project is not merely an “improved moving-average strategy.” It is a reusable <strong>state-transition filter</strong> for any noisy signal that has meaningful upper and lower regions.</p><div class="viz-panel"><h3>Interactive architecture explorer</h3><p class="viz-intro">Select a stage to see what enters it, what it must produce, and the failure it prevents.</p><div class="mini-steps" id="pipelineSteps"><button class="mini-step active" data-step="0">1. Data</button><button class="mini-step" data-step="1">2. Score</button><button class="mini-step" data-step="2">3. Hysteresis</button><button class="mini-step" data-step="3">4. Validation</button><button class="mini-step" data-step="4">5. Report</button></div><canvas class="viz-canvas short" id="pipelineCanvas"></canvas><div class="viz-note" id="pipelineNote"></div></div>
+<div class="diagram"><div class="pipeline">
+<div class="pipe-node">OHLCV data</div><div class="pipe-arrow">→</div><div class="pipe-node">Causal score</div><div class="pipe-arrow">→</div><div class="pipe-node">Hysteresis filter</div><div class="pipe-arrow">→</div><div class="pipe-node">Stable state</div>
+</div><div class="pipeline" style="margin-top:10px">
+<div class="pipe-node">Validation</div><div class="pipe-arrow">→</div><div class="pipe-node">Optuna on past</div><div class="pipe-arrow">→</div><div class="pipe-node">Unseen test fold</div><div class="pipe-arrow">→</div><div class="pipe-node">Research report</div>
+</div></div>
+<h3>Core question</h3>
+<div class="formula">When is a movement large and persistent enough to count as a real state change rather than ordinary oscillation?</div>
+<div class="grid-3">
+<div class="card"><h4>Input</h4><p>A continuous score such as percentage distance from an MA, position inside a Donchian channel, RSI reversion pressure, or relative volatility.</p></div>
+<div class="card"><h4>Filter</h4><p>Two thresholds and memory. The state changes only at the outer thresholds and remains unchanged inside the band.</p></div>
+<div class="card"><h4>Output</h4><p>A stable state such as bullish/bearish, long/flat, high/low volatility, or breakout/no breakout.</p></div>
+</div>
+<h3>What success means</h3>
+<ul><li>Fewer rapid back-and-forth changes.</li><li>Confirmed transitions are more likely to continue for the chosen horizon.</li><li>The filter still produces enough events to be useful.</li><li>The improvement survives chronological out-of-sample testing and realistic costs.</li></ul>
+<div class="callout warn"><strong>No universal threshold exists.</strong> A threshold is conditional on the signal scale, instrument, timeframe, market regime, costs, and your definition of a false signal.</div>
+</section>
+<section class="chapter" data-chapter="2" id="chapter-2">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 2</div><h2>Interactive Schmitt-trigger variant laboratory</h2>
+<p>In electronics, a true Schmitt trigger switches at a higher point while the input rises and at a lower point while it falls. For trading, the input should usually be a derived score—such as price distance from MA48—not the absolute price level. The gap between the two switching levels rejects ordinary oscillation while the state memory prevents immediate reversal inside the band.</p>
+<div class="viz-panel" id="variantLab">
+<h3>Compare hysteresis variants on price relative to a derived reference</h3>
+<p class="viz-intro">The trigger is applied to the distance between price and a reference such as MA48, not to the raw price level. The same synthetic OHLC path is used for both panels, so differences come from the filter design. Change the controls and inspect the bands, state changes, quick reversals and delay.</p>
+<div class="viz-toolbar">
+<div class="viz-control"><label><span>Variant A</span></label><select id="variantA">
+<option value="percent">percent_band — fixed %</option><option value="std">std_band — residual STD</option><option value="tr">tr_band — true range / ATR</option><option value="confirmed">confirmed_band — % + bars</option><option value="kalman">kalman_schmitt</option><option value="multi">multi_timeframe_schmitt</option><option value="wavelet">wavelet_schmitt</option><option value="dynamic">dynamic_adaptive_band</option><option value="asymmetric">mixed_asymmetric_band</option>
+</select></div>
+<div class="viz-control"><label><span>Variant B</span></label><select id="variantB">
+<option value="percent">percent_band — fixed %</option><option value="std">std_band — residual STD</option><option selected="" value="tr">tr_band — true range / ATR</option><option value="confirmed">confirmed_band — % + bars</option><option value="kalman">kalman_schmitt</option><option value="multi">multi_timeframe_schmitt</option><option value="wavelet">wavelet_schmitt</option><option value="dynamic">dynamic_adaptive_band</option><option value="asymmetric">mixed_asymmetric_band</option>
+</select></div>
+<div class="viz-control"><label><span>Reference MA</span><span id="maWindowValue">48</span></label><select id="maWindow"><option>20</option><option selected="">48</option><option>288</option><option>1440</option></select></div>
+<div class="viz-control"><label><span>Visible bars</span><span id="visibleBarsValue">420</span></label><input id="visibleBars" max="700" min="220" step="20" type="range" value="420"/></div>
+<div class="viz-control"><label><span>Fixed band</span><span id="basePctValue">0.45%</span></label><input id="basePct" max="2.00" min="0.05" step="0.05" type="range" value="0.45"/></div>
+<div class="viz-control"><label><span>STD multiplier</span><span id="stdMultValue">1.25</span></label><input id="stdMult" max="4.00" min="0.25" step="0.05" type="range" value="1.25"/></div>
+<div class="viz-control"><label><span>TR / ATR multiplier</span><span id="atrMultValue">1.35</span></label><input id="atrMult" max="4.00" min="0.25" step="0.05" type="range" value="1.35"/></div>
+<div class="viz-control"><label><span>Confirmation bars</span><span id="confirmBarsValue">3</span></label><input id="confirmBars" max="10" min="1" step="1" type="range" value="3"/></div>
+<div class="viz-control"><label><span>Upper band</span><span id="upperPctValue">0.60%</span></label><input id="upperPct" max="3.00" min="0.05" step="0.05" type="range" value="0.60"/></div>
+<div class="viz-control"><label><span>Lower band</span><span id="lowerPctValue">0.30%</span></label><input id="lowerPct" max="3.00" min="0.05" step="0.05" type="range" value="0.30"/></div>
+<div class="viz-control"><label><span>Dynamic response</span><span id="dynamicValue">1.20</span></label><input id="dynamicStrength" max="3.00" min="0.00" step="0.10" type="range" value="1.20"/></div>
+<div class="viz-control"><label><span>Noise intensity</span><span id="labNoiseValue">0.65</span></label><input id="labNoise" max="1.25" min="0.15" step="0.05" type="range" value="0.65"/></div><div class="viz-control"><label><span>Minimum transitions</span><span id="labMinEventsValue">8</span></label><input id="labMinEvents" max="40" min="2" step="1" type="range" value="8"/></div>
+</div>
+<div class="compare-grid">
+<div class="compare-card"><h4><span id="variantATitle">Percent band</span><span class="variant-badge">A</span></h4><canvas class="viz-canvas tall" id="variantCanvasA"></canvas><div class="viz-stats" id="variantStatsA"></div><div class="viz-note" id="variantNoteA"></div></div>
+<div class="compare-card"><h4><span id="variantBTitle">True-range adaptive band</span><span class="variant-badge">B</span></h4><canvas class="viz-canvas tall" id="variantCanvasB"></canvas><div class="viz-stats" id="variantStatsB"></div><div class="viz-note" id="variantNoteB"></div></div>
+</div>
+<h4>All variants on the current synthetic path</h4>
+<div class="table-scroll"><table class="variant-table"><thead><tr><th>Variant</th><th>State changes</th><th>Quick reversals</th><th>Median state length</th><th>Mean band width</th><th>Continuation rate</th><th>Validity</th></tr></thead><tbody id="variantComparisonBody"></tbody></table></div>
+<div class="callout warn"><strong>Interpretation:</strong> wider bands and confirmation normally reduce oscillation, but they also delay transitions. Kalman and wavelet preprocessing change the measured signal before hysteresis. The wavelet illustration uses batch Haar denoising, so it is suitable for offline explanation—not as a leakage-safe live feature without a causal rolling design.</div>
+</div>
+<h3>What the laboratory teaches</h3>
+<div class="grid-2"><div class="card"><h4>Small threshold</h4><p>Responds quickly but may still chatter. It often keeps many false transitions and high turnover.</p></div><div class="card"><h4>Large threshold</h4><p>Filters more noise but adds delay and can suppress useful events. This is why “minimize flips” cannot be the only objective.</p></div></div>
+<h3>The state rule</h3>
+<div class="formula">Switch to +1 when score ≥ upper. Switch to −1 when score ≤ lower. Otherwise keep the previous state.</div>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def schmitt_state(
+    score: pd.Series,
+    upper: Real | pd.Series,
+    lower: Real | pd.Series,
+    confirmation_bars: int = 1,
+    initial_state: int = 0,
+) -&gt; pd.Series:
+    """Convert a noisy score into stable -1/0/+1 states.
+
+    The state switches upward only after the score reaches ``upper`` and
+    switches downward only after the score reaches ``lower``. Between the two
+    thresholds, the previous state is retained.
+    """
+    if confirmation_bars &lt; 1:
+        raise ValueError("confirmation_bars must be at least 1.")
+    if initial_state not in {-1, 0, 1}:
+        raise ValueError("initial_state must be -1, 0, or 1.")
+
+    upper_array = _as_array(upper, score.index, "upper")
+    lower_array = _as_array(lower, score.index, "lower")
+    states = _schmitt_array(
+        score.to_numpy(dtype=np.float64),
+        upper_array,
+        lower_array,
+        int(confirmation_bars),
+        int(initial_state),
+    )
+    return pd.Series(states, index=score.index, name="schmitt_state")</code></pre>
+</div>
+<div class="callout good"><strong>The memory is essential.</strong> A pair of threshold comparisons without retaining the previous state is a band classifier, not a Schmitt trigger.</div>
+</section>
+<section class="chapter" data-chapter="3" id="chapter-3">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 3</div><h2>Design the research question before optimizing</h2>
+<p class="lead">Optimization is only meaningful after you define exactly what counts as an oscillation, a continuation, and an acceptable number of signals.</p><div class="viz-panel"><h3>Interactive event-definition laboratory</h3><p class="viz-intro">Change the evaluation horizon and quick-reversal window. The same transitions are reclassified immediately.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Continuation horizon</span><span id="rqHorizonValue">12 bars</span></label><input id="rqHorizon" max="36" min="3" step="1" type="range" value="12"/></div><div class="viz-control"><label><span>Quick-reversal window</span><span id="rqReverseValue">6 bars</span></label><input id="rqReverse" max="18" min="1" step="1" type="range" value="6"/></div><div class="viz-control"><label><span>Minimum continuation</span><span id="rqMoveValue">0.10%</span></label><input id="rqMove" max="0.8" min="0" step="0.05" type="range" value="0.10"/></div></div><canvas class="viz-canvas" id="researchCanvas"></canvas><div class="viz-stats" id="researchStats"></div></div>
+<h3>Recommended event definition</h3>
+<ol><li>A <strong>transition event</strong> occurs when the filtered state changes.</li><li>A <strong>quick reversal</strong> occurs when the state changes back within a chosen number of bars.</li><li>A <strong>continuation</strong> occurs when the direction-adjusted future return is above a chosen minimum after a fixed horizon.</li><li>A <strong>useful configuration</strong> must produce at least a minimum number of events.</li></ol>
+<div class="grid-3"><div class="card"><h4>Example horizon</h4><p>On 5-minute data, 12 bars means one hour. Choose it from the intended decision horizon, not after seeing the best result.</p></div><div class="card"><h4>Example reversal window</h4><p>Six bars means a state that reverses within 30 minutes is treated as unstable.</p></div><div class="card"><h4>Minimum move</h4><p>Zero tests direction only. A positive minimum move can require continuation large enough to matter after costs.</p></div></div>
+<h3>Separate two layers</h3>
+<div class="table-scroll"><table><thead><tr><th>Layer</th><th>Question</th><th>Typical measures</th><th>Why it is separate</th></tr></thead><tbody>
+<tr><td>Signal quality</td><td>Did hysteresis produce cleaner state changes?</td><td>flip rate, quick reversal rate, continuation hit rate, event count</td><td>A clean signal is not automatically profitable.</td></tr>
+<tr><td>Trading performance</td><td>Does a position rule built from that state survive costs and risk?</td><td>net return, Sharpe, drawdown, turnover, profit factor</td><td>Position sizing, execution and costs can dominate.</td></tr>
+</tbody></table></div>
+<div class="callout danger"><strong>Avoid target leakage.</strong> Future returns may be used to evaluate a candidate threshold, but never to create the score or current threshold. All rolling features must use current and past observations only; adaptive bands should normally use <code>shift(1)</code> before rolling calibration.</div>
+</section>
+<section class="chapter" data-chapter="4" id="chapter-4">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 4</div><h2>Local environment and project structure</h2>
+<p>The supplied project uses Python 3.11 or newer, an editable package under <code>src/</code>, a Jupyter notebook, and tests. Code follows readable PEP 8 conventions and uses type hints where they improve clarity.</p><div class="viz-panel"><h3>Interactive local-stack map</h3><p class="viz-intro">Turn project capabilities on or off to see which packages are needed and which files they support.</p><div class="toggle-row" id="stackToggles"><button class="toggle-chip active" data-stack="data">CCXT data</button><button class="toggle-chip active" data-stack="optuna">Optuna</button><button class="toggle-chip active" data-stack="plots">Visuals</button><button class="toggle-chip" data-stack="speed">Numba speed</button><button class="toggle-chip" data-stack="notebook">Jupyter</button></div><canvas class="viz-canvas short" id="stackCanvas"></canvas><div class="viz-note" id="stackNote"></div></div>
+<h3>Install</h3>
+<div class="code-wrap">
+<div class="code-head"><span>Terminal</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+pytest
+jupyter lab</code></pre>
+</div>
+<h3>Requirements</h3>
+<div class="code-wrap">
+<div class="code-head"><span>requirements.txt</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>ccxt&gt;=4.4
+jupyterlab&gt;=4.2
+matplotlib&gt;=3.8
+numba&gt;=0.60
+numpy&gt;=1.26
+optuna&gt;=4.0
+pandas&gt;=2.2
+plotly&gt;=5.24
+pyarrow&gt;=16.0
+scikit-learn&gt;=1.5
+seaborn&gt;=0.13
+tqdm&gt;=4.66
+</code></pre>
+</div>
+<h3>Project map</h3>
+<div class="file-list">
+<a href="notebooks/01_xrp_hysteresis_research.ipynb"><strong>notebooks/01_xrp_hysteresis_research.ipynb</strong> — executable XRP experiment</a>
+<a href="src/hysteresis_lab/data.py"><strong>src/hysteresis_lab/data.py</strong> — CCXT download and OHLCV validation</a>
+<a href="src/hysteresis_lab/signals.py"><strong>src/hysteresis_lab/signals.py</strong> — MA, Donchian, RSI and volatility scores</a>
+<a href="src/hysteresis_lab/triggers.py"><strong>src/hysteresis_lab/triggers.py</strong> — Numba-accelerated state machines</a>
+<a href="src/hysteresis_lab/metrics.py"><strong>src/hysteresis_lab/metrics.py</strong> — signal-quality measures and bounded objective</a>
+<a href="src/hysteresis_lab/optimize.py"><strong>src/hysteresis_lab/optimize.py</strong> — chronological Optuna and walk-forward validation</a>
+<a href="src/hysteresis_lab/backtest.py"><strong>src/hysteresis_lab/backtest.py</strong> — explicit cost-aware research backtest</a>
+<a href="tests/test_triggers.py"><strong>tests/</strong> — checks for state retention and confirmation logic</a>
+</div>
+<div class="callout"><strong>Why Numba?</strong> Hysteresis is stateful, so a simple vectorized expression is not enough. Numba compiles the loop and keeps optimization practical on roughly 200,000 five-minute rows.</div>
+</section>
+<section class="chapter" data-chapter="5" id="chapter-5">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 5</div><h2>Download two years of XRP 5-minute candles</h2>
+<p>CCXT offers a unified <code>fetch_ohlcv</code> interface, but exchange history, per-request limits, rate limits and data gaps remain exchange-specific. The downloader therefore paginates forward, respects rate limiting, retries temporary network failures and tries smaller request limits when necessary.</p><div class="viz-panel"><h3>Interactive CCXT pagination planner</h3><p class="viz-intro">A two-year 5-minute request requires many exchange calls. This planner shows the batches and estimated candle count; the real downloader must still respect exchange limits and actual availability.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Requested history</span><span id="historyDaysValue">730 days</span></label><input id="historyDays" max="730" min="30" step="10" type="range" value="730"/></div><div class="viz-control"><label><span>Candles per request</span><span id="requestLimitValue">1000</span></label><input id="requestLimit" max="1500" min="100" step="100" type="range" value="1000"/></div><div class="viz-control"><label><span>Timeframe</span></label><select id="timeframeSelect"><option value="1">1m</option><option selected="" value="5">5m</option><option value="15">15m</option><option value="60">1h</option></select></div></div><canvas class="viz-canvas short" id="paginationCanvas"></canvas><div class="viz-stats" id="paginationStats"></div></div>
+<h3>Experiment configuration</h3>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>EXCHANGE_ID = "binance"
+SYMBOL = "XRP/USDT"
+TIMEFRAME = "5m"
+START = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=730)
+
+exchange = build_exchange(EXCHANGE_ID)
+raw = fetch_ohlcv_paginated(
+    exchange=exchange,
+    symbol=SYMBOL,
+    timeframe=TIMEFRAME,
+    start=START,
+)
+save_parquet(raw, "data/xrp_usdt_5m.parquet")</code></pre>
+</div>
+<h3>What the downloader guarantees</h3>
+<ul><li>UTC-aware timestamps.</li><li>Only candles whose opening time is before the current still-open candle.</li><li>Forward pagination with a stop condition that prevents an infinite repeated-page loop.</li><li>No invented rows when the exchange returns less history than requested.</li><li>An explicit failure if the symbol or OHLCV capability is unavailable.</li></ul>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def fetch_ohlcv_paginated(
+    exchange: ccxt.Exchange,
+    symbol: str,
+    timeframe: str,
+    start: str | pd.Timestamp,
+    end: str | pd.Timestamp | None = None,
+    limit_candidates: Iterable[int] = (1_000, 500, 200, 100),
+    max_retries: int = 5,
+) -&gt; pd.DataFrame:
+    """Download closed OHLCV candles with forward pagination.
+
+    The function starts with a large request limit and falls back to smaller
+    limits if an exchange rejects it. It never fabricates missing candles.
+    """
+    if symbol not in exchange.markets:
+        raise ValueError(f"Symbol {symbol!r} is not available on {exchange.id}.")
+
+    timeframe_ms = timeframe_to_milliseconds(timeframe)
+    start_ms = int(_to_utc_timestamp(start).timestamp() * 1_000)
+
+    now_ms = exchange.milliseconds()
+    current_candle_open_ms = now_ms - (now_ms % timeframe_ms)
+    requested_end_ms = (
+        int(_to_utc_timestamp(end).timestamp() * 1_000)
+        if end is not None
+        else current_candle_open_ms
+    )
+    end_ms = min(requested_end_ms, current_candle_open_ms)
+
+    if start_ms &gt;= end_ms:
+        raise ValueError("The start time must be earlier than the last closed candle.")
+
+    limits = tuple(int(value) for value in limit_candidates)
+    if not limits or any(value &lt;= 0 for value in limits):
+        raise ValueError("limit_candidates must contain positive integers.")
+
+    rows: list[list[float]] = []
+    since_ms = start_ms
+    previous_last_timestamp: int | None = None
+    active_limit_index = 0
+
+    while since_ms &lt; end_ms:
+        batch: list[list[float]] | None = None
+        last_error: Exception | None = None
+
+        while active_limit_index &lt; len(limits) and batch is None:
+            limit = limits[active_limit_index]
+
+            for attempt in range(max_retries):
+                try:
+                    batch = exchange.fetch_ohlcv(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        since=since_ms,
+                        limit=limit,
+                    )
+                    break
+                except (
+                    ccxt.NetworkError,
+                    ccxt.RequestTimeout,
+                    ccxt.DDoSProtection,
+                    ccxt.RateLimitExceeded,
+                ) as exc:
+                    last_error = exc
+                    time.sleep(min(2**attempt, 30))
+                except ccxt.ExchangeError as exc:
+                    last_error = exc
+                    break
+
+            if batch is None:
+                active_limit_index += 1
+
+        if batch is None:
+            raise RuntimeError(
+                "OHLCV download failed for every request limit. "
+                f"Last error: {last_error}"
+            )
+
+        if len(batch) == 0:
+            break
+
+        filtered_batch = [
+            row for row in batch if start_ms &lt;= int(row[0]) &lt; end_ms
+        ]
+        rows.extend(filtered_batch)
+
+        last_timestamp = int(batch[-1][0])
+        if previous_last_timestamp is not None and last_timestamp &lt;= previous_last_timestamp:
+            break
+
+        previous_last_timestamp = last_timestamp
+        since_ms = last_timestamp + timeframe_ms
+
+        if len(batch) &lt; limits[active_limit_index]:
+            break
+
+    frame = pd.DataFrame(rows, columns=OHLCV_COLUMNS)
+    if frame.empty:
+        raise RuntimeError(
+            "The exchange returned no candles for the requested symbol and period."
+        )
+
+    frame["timestamp"] = pd.to_datetime(frame["timestamp"], unit="ms", utc=True)
+    frame = frame.set_index("timestamp")
+    numeric_columns = ["open", "high", "low", "close", "volume"]
+    frame[numeric_columns] = frame[numeric_columns].apply(
+        pd.to_numeric,
+        errors="coerce",
+    )
+    return frame</code></pre>
+</div>
+<div class="callout warn"><strong>Do not assume 730 days were received.</strong> Print the real first timestamp, last timestamp and row count. A request limit is not the same as historical availability.</div>
+</section>
+<section class="chapter" data-chapter="6" id="chapter-6">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 6</div><h2>Validate before creating signals</h2>
+<p class="lead">Financial data must be structurally valid before rolling indicators, Optuna or backtests are allowed to use it.</p><div class="viz-panel"><h3>Interactive data-quality inspector</h3><p class="viz-intro">Inject realistic defects into a clean synthetic OHLCV sequence and observe which checks catch them. Missing bars are shown as gaps rather than silently filled.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Missing bars</span><span id="gapValue">4</span></label><input id="gapSlider" max="18" min="0" step="1" type="range" value="4"/></div><div class="viz-control"><label><span>Duplicate timestamps</span><span id="dupValue">2</span></label><input id="dupSlider" max="10" min="0" step="1" type="range" value="2"/></div><div class="viz-control"><label><span>Contaminant spikes</span><span id="spikeValue">2</span></label><input id="spikeSlider" max="8" min="0" step="1" type="range" value="2"/></div></div><canvas class="viz-canvas" id="qualityCanvas"></canvas><div class="viz-stats" id="qualityStats"></div></div>
+<div class="grid-2"><div class="card"><h4>Checks performed</h4><ul><li>duplicate and out-of-order timestamps</li><li>missing 5-minute intervals</li><li>missing numeric values, non-positive prices and negative volume</li><li>high lower than open/low/close</li><li>low higher than open/high/close</li><li>incomplete last candle</li></ul></div><div class="card"><h4>What is not done automatically</h4><ul><li>no silent forward fill</li><li>no interpolation of prices</li><li>no deletion of extreme but valid market moves</li><li>no assumption that a gap is harmless</li></ul></div></div>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>data, report = validate_ohlcv(raw, timeframe="5m")
+print(pd.Series(report.to_dict()))
+
+if report.missing_intervals &gt; 0:
+    data = longest_contiguous_segment(data, timeframe="5m")</code></pre>
+</div>
+<details><summary>Full validation function</summary><div><div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def validate_ohlcv(
+    frame: pd.DataFrame,
+    timeframe: str,
+    remove_incomplete_last_candle: bool = True,
+) -&gt; tuple[pd.DataFrame, ValidationReport]:
+    """Validate and sort OHLCV data without silently filling gaps."""
+    required = {"open", "high", "low", "close", "volume"}
+    missing_columns = required.difference(frame.columns)
+    if missing_columns:
+        raise ValueError(f"Missing OHLCV columns: {sorted(missing_columns)}")
+    if not isinstance(frame.index, pd.DatetimeIndex):
+        raise TypeError("The DataFrame index must be a DatetimeIndex.")
+
+    data = frame.copy()
+    if data.index.tz is None:
+        data.index = data.index.tz_localize("UTC")
+    else:
+        data.index = data.index.tz_convert("UTC")
+
+    original_index_ns = data.index.asi8
+    out_of_order_rows = int((original_index_ns[1:] &lt; original_index_ns[:-1]).sum())
+    duplicate_timestamps = int(data.index.duplicated(keep=False).sum())
+
+    data = data.sort_index(kind="stable")
+    data = data[~data.index.duplicated(keep="last")]
+
+    timeframe_ms = timeframe_to_milliseconds(timeframe)
+    incomplete_removed = False
+    if remove_incomplete_last_candle and not data.empty:
+        now_ms = int(pd.Timestamp.now(tz="UTC").timestamp() * 1_000)
+        last_open_ms = int(data.index[-1].timestamp() * 1_000)
+        if last_open_ms + timeframe_ms &gt; now_ms:
+            data = data.iloc[:-1]
+            incomplete_removed = True
+
+    numeric_columns = ["open", "high", "low", "close", "volume"]
+    data[numeric_columns] = data[numeric_columns].apply(
+        pd.to_numeric,
+        errors="coerce",
+    )
+
+    price_columns = ["open", "high", "low", "close"]
+    non_positive_prices = int((data[price_columns] &lt;= 0).any(axis=1).sum())
+    negative_volume_rows = int((data["volume"] &lt; 0).sum())
+    missing_numeric_rows = int(data[numeric_columns].isna().any(axis=1).sum())
+
+    row_max = data[["open", "low", "close"]].max(axis=1)
+    row_min = data[["open", "high", "close"]].min(axis=1)
+    invalid_ohlc = (data["high"] &lt; row_max) | (data["low"] &gt; row_min)
+    invalid_ohlc_rows = int(invalid_ohlc.sum())
+
+    timestamp_ms = data.index.asi8 // 1_000_000
+    if len(timestamp_ms) &gt; 1:
+        gaps = (timestamp_ms[1:] - timestamp_ms[:-1]) // timeframe_ms - 1
+        missing_intervals = int(gaps[gaps &gt; 0].sum())
+    else:
+        missing_intervals = 0
+
+    report = ValidationReport(
+        rows=len(data),
+        duplicate_timestamps=duplicate_timestamps,
+        out_of_order_rows=out_of_order_rows,
+        missing_intervals=missing_intervals,
+        non_positive_prices=non_positive_prices,
+        negative_volume_rows=negative_volume_rows,
+        missing_numeric_rows=missing_numeric_rows,
+        invalid_ohlc_rows=invalid_ohlc_rows,
+        incomplete_last_candle_removed=incomplete_removed,
+    )
+    return data, report</code></pre>
+</div></div></details>
+<div class="callout good"><strong>Why use the longest contiguous segment?</strong> Chronological folds should cover comparable durations. Row-based splitting on a series with large time gaps can create misleading fold comparisons. Excluded gaps still need investigation; selecting a segment is not a repair.</div>
+</section>
+<section class="chapter" data-chapter="7" id="chapter-7">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 7</div><h2>The signal contract</h2>
+<p>A reusable hysteresis engine should not know whether its input came from an MA, RSI, a channel, volatility or a model. Every strategy first produces a continuous <strong>score</strong>.</p><div class="viz-panel"><h3>Interactive signal-contract transformer</h3><p class="viz-intro">Choose a score family and normalization. A good contract puts different signals into a documented, comparable scale before hysteresis.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Signal family</span></label><select id="contractSignal"><option value="ma">Price–MA distance</option><option value="rsi">RSI pressure</option><option value="donchian">Donchian position</option><option value="vol">Relative volatility</option></select></div><div class="viz-control"><label><span>Normalization</span></label><select id="contractNorm"><option value="raw">Raw documented scale</option><option value="z">Rolling z-score</option><option value="robust">Robust median/MAD</option></select></div><div class="viz-control"><label><span>Window</span><span id="contractWindowValue">48</span></label><input id="contractWindow" max="144" min="12" step="4" type="range" value="48"/></div></div><canvas class="viz-canvas" id="contractCanvas"></canvas><div class="viz-note" id="contractNote"></div></div>
+<h3>A good score has four properties</h3>
+<div class="grid-2"><div class="card"><h4>Directional meaning</h4><p>Larger values consistently mean more evidence for one state; smaller values mean more evidence for the opposite state.</p></div><div class="card"><h4>Causal construction</h4><p>The value at time <em>t</em> uses only information available by time <em>t</em>.</p></div><div class="card"><h4>Understandable scale</h4><p>Percentage, ATR units, standard-deviation units or a bounded oscillator make threshold ranges interpretable.</p></div><div class="card"><h4>Enough variation</h4><p>A nearly constant or extremely sparse score gains little from hysteresis.</p></div></div>
+<h3>Generic interface</h3>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>score = strategy_score(data)
+state = schmitt_state(
+    score=score,
+    upper=upper_threshold,
+    lower=lower_threshold,
+    confirmation_bars=confirmation,
+)</code></pre>
+</div>
+<h3>When hysteresis is unsuitable</h3>
+<ul><li>The strategy already emits rare discrete events rather than a noisy continuous measurement.</li><li>A delayed state change is unacceptable for the use case.</li><li>The score meaning changes over time and is not normalized.</li><li>The threshold is optimized on the same period used for the final performance claim.</li></ul>
+</section>
+<section class="chapter" data-chapter="8" id="chapter-8">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 8</div><h2>Four independent MA baselines</h2>
+<p>Use MA20, MA48, MA288 and MA1440 as separate experiments. On five-minute candles they represent approximately 100 minutes, 4 hours, 24 hours and 5 days. Each produces its own score and must receive its own optimization and validation.</p><div class="viz-panel"><h3>Interactive MA oscillation explorer</h3><p class="viz-intro">Select each MA independently. The chart shows the raw price/MA crossings and how a percentage hysteresis band changes the state.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>MA window</span></label><select id="maExplorerWindow"><option>20</option><option selected="">48</option><option>288</option><option>1440</option></select></div><div class="viz-control"><label><span>Band</span><span id="maExplorerBandValue">0.45%</span></label><input id="maExplorerBand" max="2.0" min="0.05" step="0.05" type="range" value="0.45"/></div><div class="viz-control"><label><span>Visible bars</span><span id="maExplorerBarsValue">420</span></label><input id="maExplorerBars" max="700" min="200" step="20" type="range" value="420"/></div></div><canvas class="viz-canvas tall" id="maExplorerCanvas"></canvas><div class="viz-stats" id="maExplorerStats"></div></div>
+<div class="formula">score = close / trailing_MA − 1</div>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def ma_distance_score(close: pd.Series, window: int) -&gt; pd.Series:
+    """Return percentage distance between price and a trailing simple MA."""
+    if window &lt; 2:
+        raise ValueError("window must be at least 2.")
+    moving_average = close.rolling(window=window, min_periods=window).mean()
+    score = close.div(moving_average).sub(1.0)
+    return score.rename(f"ma_distance_{window}")</code></pre>
+</div>
+<h3>Why not mix the four strategies immediately?</h3>
+<p>Combining them before understanding each one hides which scale creates the noise, which threshold is stable, and whether one signal dominates. First create a result table per MA; build a multi-scale ensemble only after independent out-of-sample evidence exists.</p>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>MA_WINDOWS = [20, 48, 288, 1_440]
+ma_scores = {{
+    window: ma_distance_score(data["close"], window)
+    for window in MA_WINDOWS
+}}
+
+baseline_states = {{
+    window: schmitt_state(score, upper=0.005, lower=-0.005)
+    for window, score in ma_scores.items()
+}}</code></pre>
+</div>
+<div class="callout warn"><strong>0.5% is an illustrative starting band, not a default truth.</strong> Its role is to create a reproducible baseline before optimization.</div>
+</section>
+<section class="chapter" data-chapter="9" id="chapter-9">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 9</div><h2>Hysteresis variants worth comparing</h2>
+<p>The cleanest architecture keeps one trigger engine and changes either the score normalization, the thresholds or the transition rule.</p><div class="viz-panel"><h3>Interactive threshold trade-off surface</h3><p class="viz-intro">Move across threshold and confirmation values. The selected cell shows the central trade-off: noise reduction versus transition delay.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Threshold</span><span id="surfaceThresholdValue">0.60%</span></label><input id="surfaceThreshold" max="2.00" min="0.10" step="0.10" type="range" value="0.60"/></div><div class="viz-control"><label><span>Confirmation</span><span id="surfaceConfirmValue">3</span></label><input id="surfaceConfirm" max="8" min="1" step="1" type="range" value="3"/></div><div class="viz-control"><label><span>Metric</span></label><select id="surfaceMetric"><option value="balance">Balanced quality</option><option value="flips">Noise reduction</option><option value="delay">Low delay</option></select></div></div><canvas class="viz-canvas" id="surfaceCanvas"></canvas><div class="viz-note" id="surfaceNote"></div></div>
+<div class="table-scroll"><table><thead><tr><th>Variant</th><th>Definition</th><th>Main strength</th><th>Main risk</th></tr></thead><tbody>
+<tr><td><code>percent_band</code></td><td>Price distance divided by MA</td><td>Simple and interpretable</td><td>Does not adapt to changing volatility</td></tr>
+<tr><td><code>std_band</code></td><td>Price-minus-MA residual divided by past residual deviation</td><td>Statistical normalization</td><td>Standard deviation can react poorly to extreme tails</td></tr>
+<tr><td><code>tr_band</code></td><td>Price-minus-MA divided by ATR</td><td>Adapts to trading range</td><td>ATR period adds another parameter</td></tr>
+<tr><td><code>confirmed_band</code></td><td>Threshold breach must persist for N bars</td><td>Rejects one-bar spikes</td><td>Adds delay</td></tr>
+<tr><td><strong>asymmetric band</strong></td><td>Different upper and lower widths</td><td>Allows unequal up/down behavior</td><td>Larger search space</td></tr>
+<tr><td><strong>rolling quantile band</strong></td><td>Threshold equals a past quantile of absolute score</td><td>Robust empirical adaptation</td><td>Window and quantile must remain causal</td></tr>
+<tr><td><strong>regime-adaptive band</strong></td><td>Band changes with a separately defined volatility regime</td><td>Responds to structural noise changes</td><td>Can overfit if too many regimes are introduced</td></tr>
+<tr><td><strong>cooldown / debounce</strong></td><td>Minimum bars before another change is allowed</td><td>Directly controls chattering</td><td>Can ignore a genuine fast reversal</td></tr>
+<tr><td><strong>cumulative evidence</strong></td><td>Switch after evidence accumulates, not one point</td><td>Useful for weak repeated pressure</td><td>More complex state and calibration</td></tr>
+</tbody></table></div>
+<h3>Recommended experiment order</h3>
+<ol><li>Fixed symmetric percentage.</li><li>ATR-normalized symmetric.</li><li>Residual-z symmetric.</li><li>Asymmetric upper/lower thresholds.</li><li>Confirmation bars.</li><li>Past rolling quantile.</li><li>Regime-adaptive threshold.</li></ol>
+<div class="callout"><strong>Important correction:</strong> for a “standard-deviation band,” normalize the residual around its reference, not the raw price level. Raw price standard deviation is scale-dependent and can primarily measure trend rather than local crossing noise.</div>
+</section>
+<section class="chapter" data-chapter="10" id="chapter-10">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 10</div><h2>Non-MA strategies suitable for hysteresis</h2>
+<p class="lead">Hysteresis is most useful around any threshold that a noisy score repeatedly crosses. These alternatives differ materially from a price-versus-MA crossover.</p><div class="viz-panel"><h3>Interactive non-MA strategy laboratory</h3><p class="viz-intro">The same hysteresis state machine can sit behind very different causal scores. Select a family to see its natural thresholds.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Signal</span></label><select id="nonMaSignal"><option value="donchian">Donchian breakout</option><option value="rsi">RSI mean reversion</option><option value="vol">Volatility regime</option></select></div><div class="viz-control"><label><span>Entry strictness</span><span id="nonMaEntryValue">1.20</span></label><input id="nonMaEntry" max="2.5" min="0.5" step="0.10" type="range" value="1.20"/></div><div class="viz-control"><label><span>Exit strictness</span><span id="nonMaExitValue">0.60</span></label><input id="nonMaExit" max="1.5" min="0.1" step="0.10" type="range" value="0.60"/></div></div><canvas class="viz-canvas tall" id="nonMaCanvas"></canvas><div class="viz-stats" id="nonMaStats"></div></div>
+<h3>1. Donchian channel breakout</h3>
+<p>The channel is based on prior rolling highs and lows. A normalized score above +1 means price closed above the previous upper channel; below −1 means it closed below the previous lower channel. The current candle is excluded with <code>shift(1)</code>, so it cannot define the level it is supposedly breaking.</p>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def donchian_position_score(frame: pd.DataFrame, window: int = 48) -&gt; pd.Series:
+    """Position price inside the prior Donchian range.
+
+    A score above +1 means the close is above the previous channel high.
+    A score below -1 means it is below the previous channel low. The channel
+    uses ``shift(1)`` so the current candle cannot define its own threshold.
+    """
+    if window &lt; 2:
+        raise ValueError("window must be at least 2.")
+
+    upper = frame["high"].shift(1).rolling(window, min_periods=window).max()
+    lower = frame["low"].shift(1).rolling(window, min_periods=window).min()
+    midpoint = (upper + lower) / 2
+    half_range = (upper - lower) / 2
+    score = (frame["close"] - midpoint).div(half_range.replace(0, np.nan))
+    return score.rename(f"donchian_position_{window}")</code></pre>
+</div>
+<p><strong>Use:</strong> long/short trend state, breakout confirmation, or a gate for another strategy.</p>
+<h3>2. RSI mean-reversion pressure</h3>
+<p>Map RSI into a score where oversold conditions are positive and overbought conditions are negative. A symmetric long/short state can use upper and lower thresholds; a long/flat implementation uses a higher entry threshold and a lower exit threshold.</p>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def rsi_reversion_score(close: pd.Series, period: int = 14) -&gt; pd.Series:
+    """Create a mean-reversion preference score from RSI.
+
+    Positive values represent an oversold/long preference; negative values
+    represent an overbought/short preference. The result lies roughly in
+    [-1, +1].
+    """
+    indicator = rsi(close, period=period)
+    return ((50.0 - indicator) / 50.0).rename(f"rsi_reversion_{period}")</code></pre>
+</div>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>score = rsi_reversion_score(data["close"], period=14)
+long_flat = long_flat_hysteresis(
+    score,
+    enter=0.40,  # approximately RSI below 30
+    exit_=0.00,  # approximately RSI back above 50
+)</code></pre>
+</div>
+<h3>3. Realized-volatility regime</h3>
+<p>This is not inherently a directional trade. It classifies whether recent volatility is high or low relative to its own historical baseline. The state can change position size, select a strategy, or suspend trading.</p>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def volatility_regime_score(
+    close: pd.Series,
+    short_window: int = 48,
+    baseline_window: int = 1_440,
+) -&gt; pd.Series:
+    """Compare recent realized volatility with its past rolling median."""
+    if short_window &lt; 5 or baseline_window &lt;= short_window:
+        raise ValueError("Use short_window &gt;= 5 and baseline_window &gt; short_window.")
+
+    log_return = np.log(close).diff()
+    recent_volatility = log_return.rolling(
+        short_window,
+        min_periods=short_window,
+    ).std(ddof=0)
+    historical_baseline = (
+        recent_volatility.shift(1)
+        .rolling(baseline_window, min_periods=baseline_window)
+        .median()
+    )
+    score = recent_volatility.div(historical_baseline.replace(0, np.nan)).sub(1.0)
+    return score.rename(f"volatility_regime_{short_window}_{baseline_window}")</code></pre>
+</div>
+<h3>Further suitable families</h3>
+<div class="grid-2"><div class="card"><h4>CUSUM change evidence</h4><p>Accumulate standardized positive and negative returns until evidence exceeds a threshold. Hysteresis can stabilize the detected direction.</p></div><div class="card"><h4>Volume-pressure score</h4><p>Combine signed return with relative volume, then require stronger evidence to enter than to leave a state.</p></div><div class="card"><h4>Model probability</h4><p>Enter a positive state only above a high probability and leave it below a lower probability. Calibration quality becomes critical.</p></div><div class="card"><h4>Order-book imbalance</h4><p>Useful at shorter horizons, but requires high-quality order-book data and careful synchronization; OHLCV alone is insufficient.</p></div></div>
+<div class="callout good"><strong>Best first non-MA candidate:</strong> Donchian breakout. Its thresholds have a clear market meaning, the score can be causal, and it naturally suffers from false breakouts that hysteresis is designed to reduce.</div>
+</section>
+<section class="chapter" data-chapter="11" id="chapter-11">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 11</div><h2>Objectives and metrics that do not collapse into “never trade”</h2>
+<h3>Primary signal metrics</h3>
+<div class="metric"><span><strong>Noise reduction</strong><br/><small>How many raw sign flips disappeared?</small></span><code>1 − filtered_flips / raw_flips</code></div>
+<div class="metric"><span><strong>Continuation hit rate</strong><br/><small>After a transition, did the direction-adjusted future move exceed the minimum?</small></span><code>mean(direction × future_return &gt; min_move)</code></div>
+<div class="metric"><span><strong>False reversal rate</strong><br/><small>How often did the state change back inside the reversal window?</small></span><code>false_reversals / transitions</code></div>
+<div class="metric"><span><strong>Event count</strong><br/><small>Does the candidate still generate enough observations for inference and use?</small></span><code>number of transitions</code></div>
+<div class="metric"><span><strong>Median run length</strong><br/><small>How long does the typical state persist?</small></span><code>median(consecutive state lengths)</code></div>
+<h3>Bounded single-objective score</h3>
+<p>The supplied starter uses a transparent weighted score and a hard minimum-event constraint:</p><div class="viz-panel"><h3>Interactive objective and Pareto explorer</h3><p class="viz-intro">Each dot is a candidate threshold. Adjust weights to see why one scalar score is a design choice, while the Pareto frontier preserves explicit trade-offs.</p><div class="viz-toolbar"><div class="viz-control"><label><span>Continuation weight</span><span id="wContValue">40%</span></label><input id="wCont" max="100" min="0" step="5" type="range" value="40"/></div><div class="viz-control"><label><span>Reversal penalty</span><span id="wRevValue">30%</span></label><input id="wRev" max="100" min="0" step="5" type="range" value="30"/></div><div class="viz-control"><label><span>Noise reduction</span><span id="wNoiseValue">20%</span></label><input id="wNoise" max="100" min="0" step="5" type="range" value="20"/></div><div class="viz-control"><label><span>Event-count weight</span><span id="wEventsValue">10%</span></label><input id="wEvents" max="100" min="0" step="5" type="range" value="10"/></div></div><canvas class="viz-canvas" id="objectiveCanvas"></canvas><div class="viz-note" id="objectiveNote"></div></div>
+<div class="formula">0.45 × continuation + 0.35 × (1 − false reversal) + 0.20 × noise reduction</div>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def bounded_quality_score(
+    quality: SignalQuality,
+    minimum_events: int,
+    maximum_flip_rate_per_1_000: float | None = None,
+) -&gt; float:
+    """Combine interpretable signal metrics into a bounded Optuna score.
+
+    Hard event-count and optional turnover constraints prevent the optimizer
+    from selecting a threshold that simply produces no signals.
+    """
+    if quality.events &lt; minimum_events:
+        shortage = (minimum_events - quality.events) / max(minimum_events, 1)
+        return -1.0 - shortage
+
+    if (
+        maximum_flip_rate_per_1_000 is not None
+        and quality.flip_rate_per_1_000 &gt; maximum_flip_rate_per_1_000
+    ):
+        excess = (
+            quality.flip_rate_per_1_000 / maximum_flip_rate_per_1_000 - 1.0
+        )
+        return -0.5 - excess
+
+    values = [
+        quality.continuation_hit_rate,
+        1.0 - quality.false_reversal_rate,
+        quality.noise_reduction,
+    ]
+    if not all(np.isfinite(value) for value in values):
+        return -2.0
+
+    return float(
+        0.45 * quality.continuation_hit_rate
+        + 0.35 * (1.0 - quality.false_reversal_rate)
+        + 0.20 * quality.noise_reduction
+    )</code></pre>
+</div>
+<div class="callout warn"><strong>The weights express a research preference, not a law.</strong> Run sensitivity analysis. A candidate that wins only for one narrow weight choice is weak evidence.</div>
+<h3>When to use multi-objective Optuna</h3>
+<p>Later, return separate objectives such as minimizing false reversals and maximizing continuation. Inspect the Pareto front instead of forcing one weight combination. Keep event count and extreme turnover as constraints. Too many objectives make the Pareto set difficult to interpret, so start with two or three.</p>
+<details><summary>Full signal-quality evaluator</summary><div><div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def evaluate_signal_quality(
+    score: pd.Series,
+    filtered_state: pd.Series,
+    close: pd.Series,
+    horizon: int = 12,
+    reversal_window: int = 6,
+    minimum_move: float = 0.0,
+) -&gt; SignalQuality:
+    """Evaluate whether filtered transitions are stable and continue.
+
+    Future returns are used only for evaluation. They must never be used to
+    construct the score or thresholds.
+    """
+    if horizon &lt; 1 or reversal_window &lt; 1:
+        raise ValueError("horizon and reversal_window must be positive.")
+
+    common_index = score.index.intersection(filtered_state.index).intersection(close.index)
+    score_aligned = score.reindex(common_index)
+    state_aligned = filtered_state.reindex(common_index).fillna(0).astype(np.int8)
+    close_aligned = close.reindex(common_index).astype(float)
+
+    from .triggers import raw_sign_state
+
+    raw_state = raw_sign_state(score_aligned)
+    raw_flips = count_flips(raw_state)
+    filtered_flips = count_flips(state_aligned)
+    events = transition_positions(state_aligned)
+
+    future_return = close_aligned.shift(-horizon).div(close_aligned).sub(1.0)
+    valid_events = events[events + horizon &lt; len(close_aligned)]
+
+    if valid_events.size:
+        directions = state_aligned.iloc[valid_events].to_numpy(dtype=float)
+        signed_returns = directions * future_return.iloc[valid_events].to_numpy(dtype=float)
+        finite = np.isfinite(signed_returns)
+        signed_returns = signed_returns[finite]
+    else:
+        signed_returns = np.array([], dtype=float)
+
+    continuation_hit_rate = (
+        float(np.mean(signed_returns &gt; minimum_move))
+        if signed_returns.size
+        else float("nan")
+    )
+    median_signed_return = (
+        float(np.median(signed_returns)) if signed_returns.size else float("nan")
+    )
+
+    state_values = state_aligned.to_numpy(dtype=np.int8)
+    false_reversals = 0
+    reversal_candidates = 0
+    for position in events:
+        end = min(position + reversal_window + 1, len(state_values))
+        if end &lt;= position + 1:
+            continue
+        reversal_candidates += 1
+        direction = state_values[position]
+        if np.any((state_values[position + 1 : end] != direction) &amp; (state_values[position + 1 : end] != 0)):
+            false_reversals += 1
+
+    false_reversal_rate = (
+        false_reversals / reversal_candidates
+        if reversal_candidates
+        else float("nan")
+    )
+
+    lengths = run_lengths(state_aligned)
+    median_run_length = float(np.median(lengths)) if lengths.size else float("nan")
+    noise_reduction = (
+        1.0 - filtered_flips / raw_flips if raw_flips &gt; 0 else 0.0
+    )
+    flip_rate = 1_000.0 * filtered_flips / max(len(state_aligned), 1)
+
+    return SignalQuality(
+        observations=len(state_aligned),
+        events=int(events.size),
+        raw_flips=raw_flips,
+        filtered_flips=filtered_flips,
+        flip_rate_per_1_000=float(flip_rate),
+        noise_reduction=float(noise_reduction),
+        continuation_hit_rate=continuation_hit_rate,
+        median_signed_forward_return=median_signed_return,
+        false_reversal_rate=float(false_reversal_rate),
+        median_run_length=median_run_length,
+    )</code></pre>
+</div></div></details>
+</section>
+<section class="chapter" data-chapter="12" id="chapter-12">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 12</div><h2>Use Optuna without time-series leakage</h2>
+<p>Random train/test shuffling is inappropriate because it trains on future regimes and evaluates on earlier observations. The project uses chronological inner folds for threshold selection and outer folds for untouched testing.</p><div class="viz-panel"><h3>Interactive walk-forward and Optuna simulator</h3><p class="viz-intro">Optuna is allowed to search only inside each training window. The next block remains unseen until the selected parameters are frozen.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Walk-forward folds</span><span id="wfFoldsValue">5</span></label><input id="wfFolds" max="8" min="3" step="1" type="range" value="5"/></div><div class="viz-control"><label><span>Trials per fold</span><span id="wfTrialsValue">60</span></label><input id="wfTrials" max="150" min="10" step="10" type="range" value="60"/></div><div class="viz-control"><label><span>Training style</span></label><select id="wfStyle"><option value="expanding">Expanding window</option><option value="rolling">Rolling window</option></select></div></div><canvas class="viz-canvas" id="walkForwardCanvas"></canvas><div class="viz-stats" id="walkForwardStats"></div></div>
+<div class="walk-grid">
+<div class="fold"><strong>Fold 1</strong><div class="fold-cell train">train</div><div class="fold-cell test">test</div><div class="fold-cell future">future</div><div class="fold-cell future">future</div><div class="fold-cell future">future</div><div class="fold-cell future">future</div></div>
+<div class="fold"><strong>Fold 2</strong><div class="fold-cell train">train</div><div class="fold-cell train">train</div><div class="fold-cell test">test</div><div class="fold-cell future">future</div><div class="fold-cell future">future</div><div class="fold-cell future">future</div></div>
+<div class="fold"><strong>Fold 3</strong><div class="fold-cell train">train</div><div class="fold-cell train">train</div><div class="fold-cell train">train</div><div class="fold-cell test">test</div><div class="fold-cell future">future</div><div class="fold-cell future">future</div></div>
+<div class="fold"><strong>Fold 4</strong><div class="fold-cell train">train</div><div class="fold-cell train">train</div><div class="fold-cell train">train</div><div class="fold-cell train">train</div><div class="fold-cell test">test</div><div class="fold-cell future">future</div></div>
+</div>
+<h3>Boundary memory</h3>
+<p>Do not reset the trigger at the first test bar if the real system would already be in a state. The implementation generates the state from the available past through the end of the test fold, then slices the test region. The chosen parameters come only from earlier data.</p>
+<h3>Run four MA studies</h3>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>for window, score in ma_scores.items():
+    fold_results, out_of_sample_state = walk_forward_optimize(
+        score=score,
+        close=data["close"],
+        outer_splits=5,
+        n_trials=80,
+        horizon=12,
+        reversal_window=6,
+        minimum_events=30,
+        asymmetric=True,
+        optimize_confirmation=True,
+    )</code></pre>
+</div>
+<details><summary>Optuna threshold optimizer</summary><div><div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def optimize_threshold(
+    score: pd.Series,
+    close: pd.Series,
+    n_trials: int = 80,
+    horizon: int = 12,
+    reversal_window: int = 6,
+    minimum_events: int = 20,
+    asymmetric: bool = True,
+    optimize_confirmation: bool = True,
+    inner_splits: int = 3,
+    seed: int = 42,
+) -&gt; optuna.Study:
+    """Optimize thresholds across chronological inner validation folds."""
+    index = score.index.intersection(close.index)
+    score_aligned = score.reindex(index)
+    close_aligned = close.reindex(index)
+    valid = score_aligned.notna() &amp; close_aligned.notna()
+    score_aligned = score_aligned[valid]
+    close_aligned = close_aligned[valid]
+
+    if len(score_aligned) &lt; 500:
+        raise ValueError("At least 500 valid rows are recommended for optimization.")
+
+    low, high = _search_bounds(score_aligned)
+    splitter = TimeSeriesSplit(n_splits=inner_splits)
+    sampler = optuna.samplers.TPESampler(seed=seed)
+    study = optuna.create_study(direction="maximize", sampler=sampler)
+
+    def objective(trial: optuna.Trial) -&gt; float:
+        upper = trial.suggest_float("upper", low, high, log=True)
+        lower_abs = (
+            trial.suggest_float("lower_abs", low, high, log=True)
+            if asymmetric
+            else upper
+        )
+        confirmation_bars = (
+            trial.suggest_int("confirmation_bars", 1, 8)
+            if optimize_confirmation
+            else 1
+        )
+
+        fold_scores: list[float] = []
+        for _, validation_positions in splitter.split(score_aligned):
+            validation_start = int(validation_positions[0])
+            validation_end = int(validation_positions[-1]) + 1
+
+            # Generate state on all data available up to the validation end.
+            # This preserves causal state memory at the validation boundary.
+            score_context = score_aligned.iloc[:validation_end]
+            state_context = schmitt_state(
+                score_context,
+                upper=upper,
+                lower=-lower_abs,
+                confirmation_bars=confirmation_bars,
+            )
+
+            validation_slice = slice(validation_start, validation_end)
+            quality = evaluate_signal_quality(
+                score=score_context.iloc[validation_slice],
+                filtered_state=state_context.iloc[validation_slice],
+                close=close_aligned.iloc[validation_slice],
+                horizon=horizon,
+                reversal_window=reversal_window,
+            )
+            fold_scores.append(
+                bounded_quality_score(
+                    quality,
+                    minimum_events=max(3, minimum_events // inner_splits),
+                )
+            )
+
+        return float(np.mean(fold_scores))
+
+    study.optimize(objective, n_trials=n_trials)
+    return study</code></pre>
+</div></div></details>
+<details><summary>Outer walk-forward evaluation</summary><div><div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def walk_forward_optimize(
+    score: pd.Series,
+    close: pd.Series,
+    outer_splits: int = 5,
+    n_trials: int = 60,
+    horizon: int = 12,
+    reversal_window: int = 6,
+    minimum_events: int = 20,
+    asymmetric: bool = True,
+    optimize_confirmation: bool = True,
+    seed: int = 42,
+) -&gt; tuple[pd.DataFrame, pd.Series]:
+    """Tune on past data and evaluate each selected threshold on unseen data."""
+    index = score.index.intersection(close.index)
+    score_aligned = score.reindex(index)
+    close_aligned = close.reindex(index)
+    valid = score_aligned.notna() &amp; close_aligned.notna()
+    score_aligned = score_aligned[valid]
+    close_aligned = close_aligned[valid]
+
+    splitter = TimeSeriesSplit(n_splits=outer_splits)
+    out_of_sample_state = pd.Series(
+        np.zeros(len(score_aligned), dtype=np.int8),
+        index=score_aligned.index,
+        name="walk_forward_state",
+    )
+    fold_results: list[FoldResult] = []
+
+    for fold, (train_positions, test_positions) in enumerate(
+        splitter.split(score_aligned),
+        start=1,
+    ):
+        train_end = int(train_positions[-1]) + 1
+        test_start = int(test_positions[0])
+        test_end = int(test_positions[-1]) + 1
+
+        study = optimize_threshold(
+            score=score_aligned.iloc[:train_end],
+            close=close_aligned.iloc[:train_end],
+            n_trials=n_trials,
+            horizon=horizon,
+            reversal_window=reversal_window,
+            minimum_events=minimum_events,
+            asymmetric=asymmetric,
+            optimize_confirmation=optimize_confirmation,
+            seed=seed + fold,
+        )
+
+        params = study.best_params
+        upper = float(params["upper"])
+        lower_abs = float(params.get("lower_abs", upper))
+        confirmation_bars = int(params.get("confirmation_bars", 1))
+
+        # Generate state from the beginning through the test fold so the test
+        # state depends only on past observations and keeps boundary memory.
+        context_score = score_aligned.iloc[:test_end]
+        context_state = schmitt_state(
+            context_score,
+            upper=upper,
+            lower=-lower_abs,
+            confirmation_bars=confirmation_bars,
+        )
+        test_state = context_state.iloc[test_start:test_end]
+        out_of_sample_state.iloc[test_start:test_end] = test_state.to_numpy()
+
+        test_quality = evaluate_signal_quality(
+            score=score_aligned.iloc[test_start:test_end],
+            filtered_state=test_state,
+            close=close_aligned.iloc[test_start:test_end],
+            horizon=horizon,
+            reversal_window=reversal_window,
+        )
+
+        fold_results.append(
+            FoldResult(
+                fold=fold,
+                test_start=score_aligned.index[test_start],
+                test_end=score_aligned.index[test_end - 1],
+                upper=upper,
+                lower=-lower_abs,
+                confirmation_bars=confirmation_bars,
+                objective_value=float(study.best_value),
+                test_events=test_quality.events,
+                test_continuation_hit_rate=test_quality.continuation_hit_rate,
+                test_false_reversal_rate=test_quality.false_reversal_rate,
+                test_noise_reduction=test_quality.noise_reduction,
+            )
+        )
+
+    results_frame = pd.DataFrame(result.to_dict() for result in fold_results)
+    return results_frame, out_of_sample_state</code></pre>
+</div></div></details>
+<h3>Parameter stability matters</h3>
+<ul><li>Plot the selected upper and lower thresholds by fold.</li><li>Prefer a broad stable region over a sharp single optimum.</li><li>Compare distributions across assets and timeframes.</li><li>Report failed or weak folds, not only the average.</li></ul>
+</section>
+<section class="chapter" data-chapter="13" id="chapter-13">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 13</div><h2>Backtest only after signal-quality evaluation</h2>
+<p>The included backtest is intentionally small and explicit. It lags the state by one bar, applies linear costs to position changes and reports return, volatility, Sharpe, drawdown and turnover.</p><div class="viz-panel"><h3>Interactive cost-aware backtest</h3><p class="viz-intro">Change fees, slippage and position delay. Gross and net equity separate signal quality from execution reality.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Fee per side</span><span id="feeValue">4 bps</span></label><input id="feeSlider" max="25" min="0" step="1" type="range" value="4"/></div><div class="viz-control"><label><span>Slippage per side</span><span id="slippageValue">3 bps</span></label><input id="slippageSlider" max="25" min="0" step="1" type="range" value="3"/></div><div class="viz-control"><label><span>Execution delay</span><span id="delayValue">1 bar</span></label><input id="delaySlider" max="5" min="0" step="1" type="range" value="1"/></div></div><canvas class="viz-canvas" id="backtestCanvas"></canvas><div class="viz-stats" id="backtestStats"></div></div>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>def backtest_state(
+    close: pd.Series,
+    state: pd.Series,
+    cost_bps_per_unit_turnover: float = 5.0,
+    periods_per_year: int = 365 * 24 * 12,
+) -&gt; tuple[pd.DataFrame, BacktestResult]:
+    """Evaluate a state using next-bar returns and linear trading costs.
+
+    The position is lagged by one bar. This prevents a signal calculated from
+    a candle close from earning the return that ended at that same close.
+    This is a research approximation, not an execution simulator.
+    """
+    if cost_bps_per_unit_turnover &lt; 0:
+        raise ValueError("Trading cost cannot be negative.")
+    if periods_per_year &lt;= 0:
+        raise ValueError("periods_per_year must be positive.")
+
+    index = close.index.intersection(state.index)
+    close_aligned = close.reindex(index).astype(float)
+    state_aligned = state.reindex(index).fillna(0).astype(float)
+
+    market_return = close_aligned.pct_change().fillna(0.0)
+    position = state_aligned.shift(1).fillna(0.0)
+    turnover = position.diff().abs().fillna(position.abs())
+    cost_rate = cost_bps_per_unit_turnover / 10_000.0
+
+    gross_return = position * market_return
+    net_return = gross_return - turnover * cost_rate
+    equity = (1.0 + net_return).cumprod()
+
+    running_peak = equity.cummax()
+    drawdown = equity.div(running_peak).sub(1.0)
+
+    mean_return = net_return.mean()
+    return_std = net_return.std(ddof=0)
+    sharpe = (
+        np.sqrt(periods_per_year) * mean_return / return_std
+        if return_std &gt; 0
+        else float("nan")
+    )
+
+    total_return = float(equity.iloc[-1] - 1.0) if len(equity) else float("nan")
+    years = len(net_return) / periods_per_year
+    annualized_return = (
+        float(equity.iloc[-1] ** (1 / years) - 1.0)
+        if years &gt; 0 and equity.iloc[-1] &gt; 0
+        else float("nan")
+    )
+
+    result_frame = pd.DataFrame(
+        {
+            "close": close_aligned,
+            "state": state_aligned,
+            "position": position,
+            "market_return": market_return,
+            "turnover": turnover,
+            "gross_return": gross_return,
+            "net_return": net_return,
+            "equity": equity,
+            "drawdown": drawdown,
+        }
+    )
+
+    metrics = BacktestResult(
+        total_return=total_return,
+        annualized_return=annualized_return,
+        annualized_volatility=float(return_std * np.sqrt(periods_per_year)),
+        sharpe_ratio=float(sharpe),
+        maximum_drawdown=float(drawdown.min()),
+        turnover=float(turnover.sum()),
+        trades=int(np.count_nonzero(turnover.to_numpy() &gt; 0)),
+    )
+    return result_frame, metrics</code></pre>
+</div>
+<h3>What this backtest does not model</h3>
+<div class="grid-2"><div class="card"><ul><li>bid–ask spread varying with liquidity</li><li>market impact and partial fills</li><li>exchange outages and rejected orders</li><li>funding on perpetual futures</li></ul></div><div class="card"><ul><li>latency between candle close and execution</li><li>maker/taker fee tiers</li><li>minimum order size and rounding</li><li>tax, borrowing and short availability</li></ul></div></div>
+<div class="callout danger"><strong>Do not optimize the threshold directly on final backtest Sharpe and then report the same Sharpe.</strong> That is selection bias. Keep an untouched outer test period and include costs during evaluation.</div>
+<h3>Interpretation order</h3>
+<ol><li>Check event count and state coverage.</li><li>Check false reversals and continuation.</li><li>Check turnover and estimated costs.</li><li>Inspect equity and drawdown by fold.</li><li>Only then compare aggregate risk-adjusted performance.</li></ol>
+</section>
+<section class="chapter" data-chapter="14" id="chapter-14">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 14</div><h2>Visual analysis that reveals failure modes</h2><div class="viz-panel"><h3>Interactive failure-mode atlas</h3><p class="viz-intro">A single equity curve hides the mechanism. Select a diagnostic view to reveal chatter, lag, regime instability or boundary effects.</p><div class="toggle-row" id="failureModes"><button class="toggle-chip active" data-mode="chatter">Chatter</button><button class="toggle-chip" data-mode="lag">Transition lag</button><button class="toggle-chip" data-mode="regime">Regime shift</button><button class="toggle-chip" data-mode="boundary">Boundary effects</button></div><canvas class="viz-canvas" id="failureCanvas"></canvas><div class="viz-note" id="failureNote"></div></div>
+<div class="grid-3"><div class="card"><h4>Score + thresholds</h4><p>Shows whether transitions occur at sensible distances and whether adaptive thresholds move too abruptly.</p></div><div class="card"><h4>State strip</h4><p>Makes chattering, long inactive periods and delayed reversals immediately visible.</p></div><div class="card"><h4>Fold metrics</h4><p>Reveals whether one favorable period dominates the average.</p></div><div class="card"><h4>Threshold history</h4><p>Shows parameter drift and whether the supposed optimum is stable.</p></div><div class="card"><h4>Event-aligned paths</h4><p>Plot normalized price paths after transitions to inspect continuation distributions, not just hit rate.</p></div><div class="card"><h4>Cost sensitivity</h4><p>Re-run the backtest over a plausible cost range rather than one convenient number.</p></div></div>
+<h3>Seaborn comparison example</h3>
+<div class="code-wrap">
+<div class="code-head"><span>Python</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>comparison = summary.reset_index().melt(
+    id_vars="variant",
+    value_vars=[
+        "noise_reduction",
+        "continuation_hit_rate",
+        "false_reversal_rate",
+    ],
+    var_name="metric",
+    value_name="value",
+)
+
+plt.figure(figsize=(11, 5))
+sns.barplot(data=comparison, x="variant", y="value", hue="metric")
+plt.ylim(0, 1)
+plt.title("Hysteresis variants — descriptive comparison")
+plt.tight_layout()
+plt.show()</code></pre>
+</div>
+<div class="callout"><strong>Never hide the raw comparator.</strong> Every filtered plot should be paired with the zero-threshold baseline so the amount of filtering and added delay are visible.</div>
+</section>
+<section class="chapter" data-chapter="15" id="chapter-15">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 15</div><h2>Development roadmap</h2><div class="viz-panel"><h3>Interactive implementation roadmap</h3><p class="viz-intro">Mark completed phases. Later research stages remain visibly dependent on the data, baseline and validation foundations.</p><div class="roadmap-grid" id="roadmapGrid"><label class="roadmap-phase"><input data-phase="0" type="checkbox"/> <strong>Phase 1</strong><br/>Data and validation</label><label class="roadmap-phase"><input data-phase="1" type="checkbox"/> <strong>Phase 2</strong><br/>Baselines and metrics</label><label class="roadmap-phase"><input data-phase="2" type="checkbox"/> <strong>Phase 3</strong><br/>Walk-forward Optuna</label><label class="roadmap-phase"><input data-phase="3" type="checkbox"/> <strong>Phase 4</strong><br/>Advanced adaptive filters</label></div><canvas class="viz-canvas short" id="roadmapCanvas"></canvas><div class="viz-note" id="roadmapNote"></div></div>
+<h3>Milestone 1 — correct baseline</h3>
+<ul><li>Run the notebook on XRP/USDT 5m.</li><li>Validate data and record the actual date range.</li><li>Generate MA20, MA48, MA288 and MA1440 scores.</li><li>Compare raw and fixed symmetric hysteresis.</li><li>Write unit tests for state transitions.</li></ul>
+<h3>Milestone 2 — robust optimization</h3>
+<ul><li>Add asymmetric thresholds and confirmation bars.</li><li>Run outer walk-forward evaluation.</li><li>Save every trial and fold result to Parquet or SQLite.</li><li>Plot threshold and metric stability by fold.</li><li>Perform cost and objective-weight sensitivity analysis.</li></ul>
+<h3>Milestone 3 — adaptive variants</h3>
+<ul><li>ATR-normalized and residual-z scores.</li><li>Past rolling quantile thresholds.</li><li>Volatility-regime conditional thresholds.</li><li>Cooldown and cumulative-evidence transitions.</li></ul>
+<h3>Milestone 4 — non-MA generalization</h3>
+<ul><li>Donchian breakout.</li><li>RSI long/flat reversion.</li><li>Volatility regime used as a strategy gate.</li><li>Repeat on BTC, ETH and SOL, then on a non-crypto market with market-hours-aware annualization.</li></ul>
+<h3>Milestone 5 — research report</h3>
+<div class="table-scroll"><table><thead><tr><th>Report section</th><th>Minimum content</th></tr></thead><tbody>
+<tr><td>Data</td><td>source, instrument, timezone, timeframe, range, rows, gaps, adjustments</td></tr>
+<tr><td>Signal</td><td>formula, causal construction, scale, intended market meaning</td></tr>
+<tr><td>Filter</td><td>state machine, threshold family, confirmation, initial-state rule</td></tr>
+<tr><td>Optimization</td><td>search space, objective, constraints, sampler, trials, random seed</td></tr>
+<tr><td>Validation</td><td>inner/outer folds, horizons, boundary handling, untouched test data</td></tr>
+<tr><td>Results</td><td>all folds, uncertainty, turnover, cost sensitivity, failures</td></tr>
+<tr><td>Limitations</td><td>data quality, execution simplifications, multiple testing, transferability</td></tr>
+</tbody></table></div>
+<div class="callout good"><strong>Final product vision:</strong> a universal causal filter that accepts any continuous signal score and learns a stable state-transition rule under explicit, testable objectives.</div>
+</section>
+<section class="chapter" data-chapter="16" id="chapter-16">
+<label class="chapter-check"><input type="checkbox"/> completed</label>
+<div class="chapter-kicker">Chapter 16</div><h2>Common errors, glossary and verified sources</h2><div class="viz-panel"><h3>Interactive concept check</h3><p class="viz-intro">Choose a term and test whether you can distinguish the concepts that most often cause invalid research.</p><div class="viz-toolbar compact"><div class="viz-control"><label><span>Concept</span></label><select id="quizConcept"><option value="hysteresis">Hysteresis</option><option value="leakage">Leakage</option><option value="chatter">Chatter</option><option value="walkforward">Walk-forward validation</option><option value="contaminant">Contaminant vs outlier</option></select></div><div class="viz-control"><label><span>Your answer</span></label><select id="quizAnswer"><option value="0">Choose…</option><option value="1">A state rule with memory and separate switching levels</option><option value="2">Any unusually large observation</option><option value="3">Randomly shuffled cross-validation</option><option value="4">Using unavailable future information</option><option value="5">Rapid repeated state changes near a boundary</option></select></div><div class="viz-control"><label><span>Action</span></label><button class="small-btn" id="quizCheck" type="button">Check answer</button></div></div><canvas class="viz-canvas short" id="conceptCanvas"></canvas><div class="quiz-answer" id="quizResult">Select a concept and answer.</div></div>
+<h3>Common errors</h3>
+<div class="table-scroll"><table><thead><tr><th>Error</th><th>Why it fails</th><th>Correction</th></tr></thead><tbody>
+<tr><td>Optimize only the number of flips</td><td>Largest threshold wins by producing no events</td><td>Minimum event constraint plus continuation and reversal metrics</td></tr>
+<tr><td>Random cross-validation</td><td>Future regimes enter training</td><td>Chronological inner and outer folds</td></tr>
+<tr><td>Current bar defines its own breakout</td><td>Threshold contains the event being tested</td><td>Use prior channel with <code>shift(1)</code></td></tr>
+<tr><td>Fill every missing candle</td><td>Creates artificial prices and returns</td><td>Classify gaps; do not repair silently</td></tr>
+<tr><td>Use raw price standard deviation</td><td>May reflect level/trend rather than crossing noise</td><td>Scale the residual or return</td></tr>
+<tr><td>Reset state at every test fold</td><td>Creates artificial boundary behavior</td><td>Carry causal state from available history</td></tr>
+<tr><td>Select best trial and test on same data</td><td>Selection bias</td><td>Untouched outer test folds</td></tr>
+<tr><td>Call signal quality “profitability”</td><td>Execution and sizing are missing</td><td>Evaluate the two layers separately</td></tr>
+</tbody></table></div>
+<h3>Glossary</h3>
+<input class="search" id="glossarySearch" placeholder="Search glossary…" style="max-width:420px;margin-bottom:14px" type="search"/>
+<div class="glossary-grid" id="glossaryGrid">
+<div class="glossary-item"><strong>Hysteresis</strong><br/>Different thresholds for switching upward and downward, with memory between them.</div>
+<div class="glossary-item"><strong>Chattering / whipsaw</strong><br/>Rapid alternating state changes caused by oscillation near a boundary.</div>
+<div class="glossary-item"><strong>Score</strong><br/>A continuous causal measurement supplied to the trigger.</div>
+<div class="glossary-item"><strong>State</strong><br/>A retained discrete condition such as +1, −1, long, flat, high volatility or low volatility.</div>
+<div class="glossary-item"><strong>Continuation horizon</strong><br/>The number of future bars used only to evaluate a transition.</div>
+<div class="glossary-item"><strong>False reversal</strong><br/>A state change that reverses again within the chosen window.</div>
+<div class="glossary-item"><strong>Walk-forward validation</strong><br/>Repeatedly tune on earlier data and test on later unseen data.</div>
+<div class="glossary-item"><strong>Out-of-sample</strong><br/>Data not used to choose the candidate parameters being evaluated.</div>
+<div class="glossary-item"><strong>ATR</strong><br/>Average True Range, a range-based volatility scale that accounts for gaps from the prior close.</div>
+<div class="glossary-item"><strong>Pareto front</strong><br/>Multi-objective candidates for which no objective can improve without worsening another.</div>
+<div class="glossary-item"><strong>Turnover</strong><br/>Total amount of position change, closely related to transaction costs.</div>
+<div class="glossary-item"><strong>Causal</strong><br/>Computed using only information available at or before the current time.</div>
+</div>
+<h3>Official technical references</h3>
+<ol>
+<li><a href="https://www.ti.com/lit/pdf/scea046">Texas Instruments — Understanding Schmitt Triggers</a>: higher rising threshold, lower falling threshold and noise rejection.</li>
+<li><a href="https://docs.ccxt.com/docs/manual">CCXT Manual</a>: unified <code>fetchOHLCV</code>, pagination and the need to handle holes and exchange-specific limitations.</li>
+<li><a href="https://optuna.readthedocs.io/en/stable/tutorial/20_recipes/002_multi_objective.html">Optuna — Multi-objective optimization</a>: objective directions, Pareto studies and constraints guidance.</li>
+<li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html">scikit-learn — TimeSeriesSplit</a>: chronological splits and the equal-spacing requirement.</li>
+<li><a href="https://pandas.pydata.org/docs/reference/api/pandas.api.typing.Rolling.std.html">pandas — Rolling standard deviation</a>: rolling scale calculation and <code>ddof</code>.</li>
+<li><a href="https://docs.scipy.org/doc/scipy/reference/signal.html">SciPy signal processing reference</a>: established filtering tools for later extensions.</li>
+<li><a href="https://peps.python.org/pep-0008/">PEP 8</a>: Python readability and formatting conventions.</li>
+<li><a href="https://developers.binance.com/en/docs/products/spot/rest-api">Binance Spot API documentation</a>: public market-data API and rate-limit context.</li>
+</ol>
+<details><summary>Full source: triggers.py</summary><div><div class="code-wrap">
+<div class="code-head"><span>src/hysteresis_lab/triggers.py</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>"""Stateful hysteresis filters."""
+
+from __future__ import annotations
+
+from numbers import Real
+
+import numpy as np
+import pandas as pd
+from numba import njit
+
+
+@njit
+def _schmitt_array(
+    score: np.ndarray,
+    upper: np.ndarray,
+    lower: np.ndarray,
+    confirmation_bars: int,
+    initial_state: int,
+) -&gt; np.ndarray:
+    output = np.zeros(score.size, dtype=np.int8)
+    state = initial_state
+    positive_count = 0
+    negative_count = 0
+
+    for index in range(score.size):
+        value = score[index]
+        upper_value = upper[index]
+        lower_value = lower[index]
+
+        if np.isnan(value) or np.isnan(upper_value) or np.isnan(lower_value):
+            output[index] = state
+            continue
+
+        if upper_value &lt;= lower_value:
+            output[index] = state
+            continue
+
+        if state &lt;= 0:
+            if value &gt;= upper_value:
+                positive_count += 1
+            else:
+                positive_count = 0
+
+            if positive_count &gt;= confirmation_bars:
+                state = 1
+                positive_count = 0
+                negative_count = 0
+
+        if state &gt;= 0:
+            if value &lt;= lower_value:
+                negative_count += 1
+            else:
+                negative_count = 0
+
+            if negative_count &gt;= confirmation_bars:
+                state = -1
+                positive_count = 0
+                negative_count = 0
+
+        output[index] = state
+
+    return output
+
+
+@njit
+def _long_flat_array(
+    score: np.ndarray,
+    enter: np.ndarray,
+    exit_: np.ndarray,
+    confirmation_bars: int,
+    initial_state: int,
+) -&gt; np.ndarray:
+    output = np.zeros(score.size, dtype=np.int8)
+    state = initial_state
+    enter_count = 0
+    exit_count = 0
+
+    for index in range(score.size):
+        value = score[index]
+        enter_value = enter[index]
+        exit_value = exit_[index]
+
+        if np.isnan(value) or np.isnan(enter_value) or np.isnan(exit_value):
+            output[index] = state
+            continue
+
+        if enter_value &lt;= exit_value:
+            output[index] = state
+            continue
+
+        if state == 0:
+            if value &gt;= enter_value:
+                enter_count += 1
+            else:
+                enter_count = 0
+
+            if enter_count &gt;= confirmation_bars:
+                state = 1
+                enter_count = 0
+                exit_count = 0
+        else:
+            if value &lt;= exit_value:
+                exit_count += 1
+            else:
+                exit_count = 0
+
+            if exit_count &gt;= confirmation_bars:
+                state = 0
+                enter_count = 0
+                exit_count = 0
+
+        output[index] = state
+
+    return output
+
+
+def _as_array(
+    value: Real | pd.Series,
+    index: pd.Index,
+    name: str,
+) -&gt; np.ndarray:
+    if isinstance(value, Real):
+        return np.full(len(index), float(value), dtype=np.float64)
+    if not isinstance(value, pd.Series):
+        raise TypeError(f"{name} must be a number or pandas Series.")
+    return value.reindex(index).to_numpy(dtype=np.float64)
+
+
+def schmitt_state(
+    score: pd.Series,
+    upper: Real | pd.Series,
+    lower: Real | pd.Series,
+    confirmation_bars: int = 1,
+    initial_state: int = 0,
+) -&gt; pd.Series:
+    """Convert a noisy score into stable -1/0/+1 states.
+
+    The state switches upward only after the score reaches ``upper`` and
+    switches downward only after the score reaches ``lower``. Between the two
+    thresholds, the previous state is retained.
+    """
+    if confirmation_bars &lt; 1:
+        raise ValueError("confirmation_bars must be at least 1.")
+    if initial_state not in {-1, 0, 1}:
+        raise ValueError("initial_state must be -1, 0, or 1.")
+
+    upper_array = _as_array(upper, score.index, "upper")
+    lower_array = _as_array(lower, score.index, "lower")
+    states = _schmitt_array(
+        score.to_numpy(dtype=np.float64),
+        upper_array,
+        lower_array,
+        int(confirmation_bars),
+        int(initial_state),
+    )
+    return pd.Series(states, index=score.index, name="schmitt_state")
+
+
+def long_flat_hysteresis(
+    score: pd.Series,
+    enter: Real | pd.Series,
+    exit_: Real | pd.Series,
+    confirmation_bars: int = 1,
+    initial_state: int = 0,
+) -&gt; pd.Series:
+    """Create a long/flat state with separate entry and exit thresholds."""
+    if confirmation_bars &lt; 1:
+        raise ValueError("confirmation_bars must be at least 1.")
+    if initial_state not in {0, 1}:
+        raise ValueError("initial_state must be 0 or 1.")
+
+    enter_array = _as_array(enter, score.index, "enter")
+    exit_array = _as_array(exit_, score.index, "exit_")
+    states = _long_flat_array(
+        score.to_numpy(dtype=np.float64),
+        enter_array,
+        exit_array,
+        int(confirmation_bars),
+        int(initial_state),
+    )
+    return pd.Series(states, index=score.index, name="long_flat_state")
+
+
+def raw_sign_state(score: pd.Series) -&gt; pd.Series:
+    """Return the noisy one-threshold baseline used for comparison."""
+    values = np.where(score &gt;= 0, 1, -1).astype(np.int8)
+    values[score.isna().to_numpy()] = 0
+    return pd.Series(values, index=score.index, name="raw_sign_state")
+</code></pre>
+</div></div></details>
+<details><summary>Full source: signals.py</summary><div><div class="code-wrap">
+<div class="code-head"><span>src/hysteresis_lab/signals.py</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>"""Causal signal generators for hysteresis experiments."""
+
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+
+def true_range(frame: pd.DataFrame) -&gt; pd.Series:
+    """Calculate True Range from OHLC data."""
+    previous_close = frame["close"].shift(1)
+    components = pd.concat(
+        [
+            frame["high"] - frame["low"],
+            (frame["high"] - previous_close).abs(),
+            (frame["low"] - previous_close).abs(),
+        ],
+        axis=1,
+    )
+    return components.max(axis=1).rename("true_range")
+
+
+def atr(frame: pd.DataFrame, period: int = 14) -&gt; pd.Series:
+    """Calculate Wilder-style Average True Range."""
+    if period &lt; 2:
+        raise ValueError("period must be at least 2.")
+    return (
+        true_range(frame)
+        .ewm(alpha=1 / period, adjust=False, min_periods=period)
+        .mean()
+        .rename(f"atr_{period}")
+    )
+
+
+def rsi(close: pd.Series, period: int = 14) -&gt; pd.Series:
+    """Calculate Wilder-style Relative Strength Index."""
+    if period &lt; 2:
+        raise ValueError("period must be at least 2.")
+
+    change = close.diff()
+    gains = change.clip(lower=0)
+    losses = -change.clip(upper=0)
+
+    average_gain = gains.ewm(
+        alpha=1 / period,
+        adjust=False,
+        min_periods=period,
+    ).mean()
+    average_loss = losses.ewm(
+        alpha=1 / period,
+        adjust=False,
+        min_periods=period,
+    ).mean()
+
+    relative_strength = average_gain / average_loss.replace(0, np.nan)
+    result = 100 - (100 / (1 + relative_strength))
+    result = result.where(average_loss != 0, 100.0)
+    result = result.where(average_gain != 0, 0.0)
+    return result.rename(f"rsi_{period}")
+
+
+def ma_distance_score(close: pd.Series, window: int) -&gt; pd.Series:
+    """Return percentage distance between price and a trailing simple MA."""
+    if window &lt; 2:
+        raise ValueError("window must be at least 2.")
+    moving_average = close.rolling(window=window, min_periods=window).mean()
+    score = close.div(moving_average).sub(1.0)
+    return score.rename(f"ma_distance_{window}")
+
+
+def ma_residual_z_score(
+    close: pd.Series,
+    ma_window: int,
+    scale_window: int,
+) -&gt; pd.Series:
+    """Normalize price-minus-MA residuals by their past rolling deviation."""
+    if ma_window &lt; 2 or scale_window &lt; 5:
+        raise ValueError("ma_window must be &gt;= 2 and scale_window must be &gt;= 5.")
+
+    moving_average = close.rolling(ma_window, min_periods=ma_window).mean()
+    residual = close - moving_average
+    residual_scale = (
+        residual.shift(1)
+        .rolling(scale_window, min_periods=scale_window)
+        .std(ddof=0)
+    )
+    return residual.div(residual_scale.replace(0, np.nan)).rename(
+        f"ma_residual_z_{ma_window}_{scale_window}"
+    )
+
+
+def ma_atr_score(
+    frame: pd.DataFrame,
+    ma_window: int,
+    atr_period: int = 14,
+) -&gt; pd.Series:
+    """Normalize price-minus-MA distance by ATR."""
+    moving_average = frame["close"].rolling(
+        ma_window,
+        min_periods=ma_window,
+    ).mean()
+    scale = atr(frame, period=atr_period)
+    return (frame["close"] - moving_average).div(scale.replace(0, np.nan)).rename(
+        f"ma_atr_{ma_window}_{atr_period}"
+    )
+
+
+def donchian_position_score(frame: pd.DataFrame, window: int = 48) -&gt; pd.Series:
+    """Position price inside the prior Donchian range.
+
+    A score above +1 means the close is above the previous channel high.
+    A score below -1 means it is below the previous channel low. The channel
+    uses ``shift(1)`` so the current candle cannot define its own threshold.
+    """
+    if window &lt; 2:
+        raise ValueError("window must be at least 2.")
+
+    upper = frame["high"].shift(1).rolling(window, min_periods=window).max()
+    lower = frame["low"].shift(1).rolling(window, min_periods=window).min()
+    midpoint = (upper + lower) / 2
+    half_range = (upper - lower) / 2
+    score = (frame["close"] - midpoint).div(half_range.replace(0, np.nan))
+    return score.rename(f"donchian_position_{window}")
+
+
+def rsi_reversion_score(close: pd.Series, period: int = 14) -&gt; pd.Series:
+    """Create a mean-reversion preference score from RSI.
+
+    Positive values represent an oversold/long preference; negative values
+    represent an overbought/short preference. The result lies roughly in
+    [-1, +1].
+    """
+    indicator = rsi(close, period=period)
+    return ((50.0 - indicator) / 50.0).rename(f"rsi_reversion_{period}")
+
+
+def volatility_regime_score(
+    close: pd.Series,
+    short_window: int = 48,
+    baseline_window: int = 1_440,
+) -&gt; pd.Series:
+    """Compare recent realized volatility with its past rolling median."""
+    if short_window &lt; 5 or baseline_window &lt;= short_window:
+        raise ValueError("Use short_window &gt;= 5 and baseline_window &gt; short_window.")
+
+    log_return = np.log(close).diff()
+    recent_volatility = log_return.rolling(
+        short_window,
+        min_periods=short_window,
+    ).std(ddof=0)
+    historical_baseline = (
+        recent_volatility.shift(1)
+        .rolling(baseline_window, min_periods=baseline_window)
+        .median()
+    )
+    score = recent_volatility.div(historical_baseline.replace(0, np.nan)).sub(1.0)
+    return score.rename(f"volatility_regime_{short_window}_{baseline_window}")
+
+
+def rolling_quantile_band(
+    score: pd.Series,
+    window: int,
+    quantile: float,
+) -&gt; pd.Series:
+    """Create a causal adaptive threshold from past absolute score values."""
+    if window &lt; 20:
+        raise ValueError("window must be at least 20.")
+    if not 0.5 &lt; quantile &lt; 1.0:
+        raise ValueError("quantile must be between 0.5 and 1.0.")
+
+    return (
+        score.abs()
+        .shift(1)
+        .rolling(window, min_periods=window)
+        .quantile(quantile)
+        .rename(f"quantile_band_{window}_{quantile:.3f}")
+    )
+</code></pre>
+</div></div></details>
+<details><summary>Full source: metrics.py</summary><div><div class="code-wrap">
+<div class="code-head"><span>src/hysteresis_lab/metrics.py</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>"""Signal-quality metrics for state transitions."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+
+import numpy as np
+import pandas as pd
+
+
+@dataclass(frozen=True)
+class SignalQuality:
+    """Metrics that describe noise filtering and post-transition behavior."""
+
+    observations: int
+    events: int
+    raw_flips: int
+    filtered_flips: int
+    flip_rate_per_1_000: float
+    noise_reduction: float
+    continuation_hit_rate: float
+    median_signed_forward_return: float
+    false_reversal_rate: float
+    median_run_length: float
+
+    def to_dict(self) -&gt; dict[str, int | float]:
+        return asdict(self)
+
+
+def transition_positions(state: pd.Series) -&gt; np.ndarray:
+    """Return integer locations where a non-zero state changes."""
+    values = state.to_numpy(dtype=np.int8)
+    if values.size &lt; 2:
+        return np.array([], dtype=np.int64)
+
+    changed = values[1:] != values[:-1]
+    non_zero = values[1:] != 0
+    return np.flatnonzero(changed &amp; non_zero) + 1
+
+
+def count_flips(state: pd.Series) -&gt; int:
+    """Count changes between observed states, ignoring leading unknowns."""
+    values = state.to_numpy(dtype=np.int8)
+    if values.size &lt; 2:
+        return 0
+    valid = values != 0
+    valid_values = values[valid]
+    if valid_values.size &lt; 2:
+        return 0
+    return int(np.count_nonzero(valid_values[1:] != valid_values[:-1]))
+
+
+def run_lengths(state: pd.Series) -&gt; np.ndarray:
+    """Return lengths of consecutive non-zero state runs."""
+    values = state.to_numpy(dtype=np.int8)
+    values = values[values != 0]
+    if values.size == 0:
+        return np.array([], dtype=np.int64)
+
+    boundaries = np.flatnonzero(values[1:] != values[:-1]) + 1
+    starts = np.concatenate(([0], boundaries))
+    ends = np.concatenate((boundaries, [values.size]))
+    return ends - starts
+
+
+def evaluate_signal_quality(
+    score: pd.Series,
+    filtered_state: pd.Series,
+    close: pd.Series,
+    horizon: int = 12,
+    reversal_window: int = 6,
+    minimum_move: float = 0.0,
+) -&gt; SignalQuality:
+    """Evaluate whether filtered transitions are stable and continue.
+
+    Future returns are used only for evaluation. They must never be used to
+    construct the score or thresholds.
+    """
+    if horizon &lt; 1 or reversal_window &lt; 1:
+        raise ValueError("horizon and reversal_window must be positive.")
+
+    common_index = score.index.intersection(filtered_state.index).intersection(close.index)
+    score_aligned = score.reindex(common_index)
+    state_aligned = filtered_state.reindex(common_index).fillna(0).astype(np.int8)
+    close_aligned = close.reindex(common_index).astype(float)
+
+    from .triggers import raw_sign_state
+
+    raw_state = raw_sign_state(score_aligned)
+    raw_flips = count_flips(raw_state)
+    filtered_flips = count_flips(state_aligned)
+    events = transition_positions(state_aligned)
+
+    future_return = close_aligned.shift(-horizon).div(close_aligned).sub(1.0)
+    valid_events = events[events + horizon &lt; len(close_aligned)]
+
+    if valid_events.size:
+        directions = state_aligned.iloc[valid_events].to_numpy(dtype=float)
+        signed_returns = directions * future_return.iloc[valid_events].to_numpy(dtype=float)
+        finite = np.isfinite(signed_returns)
+        signed_returns = signed_returns[finite]
+    else:
+        signed_returns = np.array([], dtype=float)
+
+    continuation_hit_rate = (
+        float(np.mean(signed_returns &gt; minimum_move))
+        if signed_returns.size
+        else float("nan")
+    )
+    median_signed_return = (
+        float(np.median(signed_returns)) if signed_returns.size else float("nan")
+    )
+
+    state_values = state_aligned.to_numpy(dtype=np.int8)
+    false_reversals = 0
+    reversal_candidates = 0
+    for position in events:
+        end = min(position + reversal_window + 1, len(state_values))
+        if end &lt;= position + 1:
+            continue
+        reversal_candidates += 1
+        direction = state_values[position]
+        if np.any((state_values[position + 1 : end] != direction) &amp; (state_values[position + 1 : end] != 0)):
+            false_reversals += 1
+
+    false_reversal_rate = (
+        false_reversals / reversal_candidates
+        if reversal_candidates
+        else float("nan")
+    )
+
+    lengths = run_lengths(state_aligned)
+    median_run_length = float(np.median(lengths)) if lengths.size else float("nan")
+    noise_reduction = (
+        1.0 - filtered_flips / raw_flips if raw_flips &gt; 0 else 0.0
+    )
+    flip_rate = 1_000.0 * filtered_flips / max(len(state_aligned), 1)
+
+    return SignalQuality(
+        observations=len(state_aligned),
+        events=int(events.size),
+        raw_flips=raw_flips,
+        filtered_flips=filtered_flips,
+        flip_rate_per_1_000=float(flip_rate),
+        noise_reduction=float(noise_reduction),
+        continuation_hit_rate=continuation_hit_rate,
+        median_signed_forward_return=median_signed_return,
+        false_reversal_rate=float(false_reversal_rate),
+        median_run_length=median_run_length,
+    )
+
+
+def bounded_quality_score(
+    quality: SignalQuality,
+    minimum_events: int,
+    maximum_flip_rate_per_1_000: float | None = None,
+) -&gt; float:
+    """Combine interpretable signal metrics into a bounded Optuna score.
+
+    Hard event-count and optional turnover constraints prevent the optimizer
+    from selecting a threshold that simply produces no signals.
+    """
+    if quality.events &lt; minimum_events:
+        shortage = (minimum_events - quality.events) / max(minimum_events, 1)
+        return -1.0 - shortage
+
+    if (
+        maximum_flip_rate_per_1_000 is not None
+        and quality.flip_rate_per_1_000 &gt; maximum_flip_rate_per_1_000
+    ):
+        excess = (
+            quality.flip_rate_per_1_000 / maximum_flip_rate_per_1_000 - 1.0
+        )
+        return -0.5 - excess
+
+    values = [
+        quality.continuation_hit_rate,
+        1.0 - quality.false_reversal_rate,
+        quality.noise_reduction,
+    ]
+    if not all(np.isfinite(value) for value in values):
+        return -2.0
+
+    return float(
+        0.45 * quality.continuation_hit_rate
+        + 0.35 * (1.0 - quality.false_reversal_rate)
+        + 0.20 * quality.noise_reduction
+    )
+</code></pre>
+</div></div></details>
+<details><summary>Full source: optimize.py</summary><div><div class="code-wrap">
+<div class="code-head"><span>src/hysteresis_lab/optimize.py</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>"""Optuna optimization with chronological validation."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+
+import numpy as np
+import optuna
+import pandas as pd
+from sklearn.model_selection import TimeSeriesSplit
+
+from .metrics import bounded_quality_score, evaluate_signal_quality
+from .triggers import schmitt_state
+
+
+@dataclass(frozen=True)
+class FoldResult:
+    fold: int
+    test_start: pd.Timestamp
+    test_end: pd.Timestamp
+    upper: float
+    lower: float
+    confirmation_bars: int
+    objective_value: float
+    test_events: int
+    test_continuation_hit_rate: float
+    test_false_reversal_rate: float
+    test_noise_reduction: float
+
+    def to_dict(self) -&gt; dict[str, int | float | pd.Timestamp]:
+        return asdict(self)
+
+
+def _search_bounds(score: pd.Series) -&gt; tuple[float, float]:
+    finite_abs = score.abs().replace([np.inf, -np.inf], np.nan).dropna()
+    if finite_abs.empty:
+        raise ValueError("The score has no finite observations.")
+
+    low = float(max(finite_abs.quantile(0.40), 1e-6))
+    high = float(finite_abs.quantile(0.995))
+    if not np.isfinite(high) or high &lt;= low:
+        high = low * 10
+    return low, high
+
+
+def optimize_threshold(
+    score: pd.Series,
+    close: pd.Series,
+    n_trials: int = 80,
+    horizon: int = 12,
+    reversal_window: int = 6,
+    minimum_events: int = 20,
+    asymmetric: bool = True,
+    optimize_confirmation: bool = True,
+    inner_splits: int = 3,
+    seed: int = 42,
+) -&gt; optuna.Study:
+    """Optimize thresholds across chronological inner validation folds."""
+    index = score.index.intersection(close.index)
+    score_aligned = score.reindex(index)
+    close_aligned = close.reindex(index)
+    valid = score_aligned.notna() &amp; close_aligned.notna()
+    score_aligned = score_aligned[valid]
+    close_aligned = close_aligned[valid]
+
+    if len(score_aligned) &lt; 500:
+        raise ValueError("At least 500 valid rows are recommended for optimization.")
+
+    low, high = _search_bounds(score_aligned)
+    splitter = TimeSeriesSplit(n_splits=inner_splits)
+    sampler = optuna.samplers.TPESampler(seed=seed)
+    study = optuna.create_study(direction="maximize", sampler=sampler)
+
+    def objective(trial: optuna.Trial) -&gt; float:
+        upper = trial.suggest_float("upper", low, high, log=True)
+        lower_abs = (
+            trial.suggest_float("lower_abs", low, high, log=True)
+            if asymmetric
+            else upper
+        )
+        confirmation_bars = (
+            trial.suggest_int("confirmation_bars", 1, 8)
+            if optimize_confirmation
+            else 1
+        )
+
+        fold_scores: list[float] = []
+        for _, validation_positions in splitter.split(score_aligned):
+            validation_start = int(validation_positions[0])
+            validation_end = int(validation_positions[-1]) + 1
+
+            # Generate state on all data available up to the validation end.
+            # This preserves causal state memory at the validation boundary.
+            score_context = score_aligned.iloc[:validation_end]
+            state_context = schmitt_state(
+                score_context,
+                upper=upper,
+                lower=-lower_abs,
+                confirmation_bars=confirmation_bars,
+            )
+
+            validation_slice = slice(validation_start, validation_end)
+            quality = evaluate_signal_quality(
+                score=score_context.iloc[validation_slice],
+                filtered_state=state_context.iloc[validation_slice],
+                close=close_aligned.iloc[validation_slice],
+                horizon=horizon,
+                reversal_window=reversal_window,
+            )
+            fold_scores.append(
+                bounded_quality_score(
+                    quality,
+                    minimum_events=max(3, minimum_events // inner_splits),
+                )
+            )
+
+        return float(np.mean(fold_scores))
+
+    study.optimize(objective, n_trials=n_trials)
+    return study
+
+
+def walk_forward_optimize(
+    score: pd.Series,
+    close: pd.Series,
+    outer_splits: int = 5,
+    n_trials: int = 60,
+    horizon: int = 12,
+    reversal_window: int = 6,
+    minimum_events: int = 20,
+    asymmetric: bool = True,
+    optimize_confirmation: bool = True,
+    seed: int = 42,
+) -&gt; tuple[pd.DataFrame, pd.Series]:
+    """Tune on past data and evaluate each selected threshold on unseen data."""
+    index = score.index.intersection(close.index)
+    score_aligned = score.reindex(index)
+    close_aligned = close.reindex(index)
+    valid = score_aligned.notna() &amp; close_aligned.notna()
+    score_aligned = score_aligned[valid]
+    close_aligned = close_aligned[valid]
+
+    splitter = TimeSeriesSplit(n_splits=outer_splits)
+    out_of_sample_state = pd.Series(
+        np.zeros(len(score_aligned), dtype=np.int8),
+        index=score_aligned.index,
+        name="walk_forward_state",
+    )
+    fold_results: list[FoldResult] = []
+
+    for fold, (train_positions, test_positions) in enumerate(
+        splitter.split(score_aligned),
+        start=1,
+    ):
+        train_end = int(train_positions[-1]) + 1
+        test_start = int(test_positions[0])
+        test_end = int(test_positions[-1]) + 1
+
+        study = optimize_threshold(
+            score=score_aligned.iloc[:train_end],
+            close=close_aligned.iloc[:train_end],
+            n_trials=n_trials,
+            horizon=horizon,
+            reversal_window=reversal_window,
+            minimum_events=minimum_events,
+            asymmetric=asymmetric,
+            optimize_confirmation=optimize_confirmation,
+            seed=seed + fold,
+        )
+
+        params = study.best_params
+        upper = float(params["upper"])
+        lower_abs = float(params.get("lower_abs", upper))
+        confirmation_bars = int(params.get("confirmation_bars", 1))
+
+        # Generate state from the beginning through the test fold so the test
+        # state depends only on past observations and keeps boundary memory.
+        context_score = score_aligned.iloc[:test_end]
+        context_state = schmitt_state(
+            context_score,
+            upper=upper,
+            lower=-lower_abs,
+            confirmation_bars=confirmation_bars,
+        )
+        test_state = context_state.iloc[test_start:test_end]
+        out_of_sample_state.iloc[test_start:test_end] = test_state.to_numpy()
+
+        test_quality = evaluate_signal_quality(
+            score=score_aligned.iloc[test_start:test_end],
+            filtered_state=test_state,
+            close=close_aligned.iloc[test_start:test_end],
+            horizon=horizon,
+            reversal_window=reversal_window,
+        )
+
+        fold_results.append(
+            FoldResult(
+                fold=fold,
+                test_start=score_aligned.index[test_start],
+                test_end=score_aligned.index[test_end - 1],
+                upper=upper,
+                lower=-lower_abs,
+                confirmation_bars=confirmation_bars,
+                objective_value=float(study.best_value),
+                test_events=test_quality.events,
+                test_continuation_hit_rate=test_quality.continuation_hit_rate,
+                test_false_reversal_rate=test_quality.false_reversal_rate,
+                test_noise_reduction=test_quality.noise_reduction,
+            )
+        )
+
+    results_frame = pd.DataFrame(result.to_dict() for result in fold_results)
+    return results_frame, out_of_sample_state
+</code></pre>
+</div></div></details>
+<details><summary>Full source: backtest.py</summary><div><div class="code-wrap">
+<div class="code-head"><span>src/hysteresis_lab/backtest.py</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>"""Small, explicit research backtest for state signals."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+
+import numpy as np
+import pandas as pd
+
+
+@dataclass(frozen=True)
+class BacktestResult:
+    total_return: float
+    annualized_return: float
+    annualized_volatility: float
+    sharpe_ratio: float
+    maximum_drawdown: float
+    turnover: float
+    trades: int
+
+    def to_dict(self) -&gt; dict[str, int | float]:
+        return asdict(self)
+
+
+def backtest_state(
+    close: pd.Series,
+    state: pd.Series,
+    cost_bps_per_unit_turnover: float = 5.0,
+    periods_per_year: int = 365 * 24 * 12,
+) -&gt; tuple[pd.DataFrame, BacktestResult]:
+    """Evaluate a state using next-bar returns and linear trading costs.
+
+    The position is lagged by one bar. This prevents a signal calculated from
+    a candle close from earning the return that ended at that same close.
+    This is a research approximation, not an execution simulator.
+    """
+    if cost_bps_per_unit_turnover &lt; 0:
+        raise ValueError("Trading cost cannot be negative.")
+    if periods_per_year &lt;= 0:
+        raise ValueError("periods_per_year must be positive.")
+
+    index = close.index.intersection(state.index)
+    close_aligned = close.reindex(index).astype(float)
+    state_aligned = state.reindex(index).fillna(0).astype(float)
+
+    market_return = close_aligned.pct_change().fillna(0.0)
+    position = state_aligned.shift(1).fillna(0.0)
+    turnover = position.diff().abs().fillna(position.abs())
+    cost_rate = cost_bps_per_unit_turnover / 10_000.0
+
+    gross_return = position * market_return
+    net_return = gross_return - turnover * cost_rate
+    equity = (1.0 + net_return).cumprod()
+
+    running_peak = equity.cummax()
+    drawdown = equity.div(running_peak).sub(1.0)
+
+    mean_return = net_return.mean()
+    return_std = net_return.std(ddof=0)
+    sharpe = (
+        np.sqrt(periods_per_year) * mean_return / return_std
+        if return_std &gt; 0
+        else float("nan")
+    )
+
+    total_return = float(equity.iloc[-1] - 1.0) if len(equity) else float("nan")
+    years = len(net_return) / periods_per_year
+    annualized_return = (
+        float(equity.iloc[-1] ** (1 / years) - 1.0)
+        if years &gt; 0 and equity.iloc[-1] &gt; 0
+        else float("nan")
+    )
+
+    result_frame = pd.DataFrame(
+        {
+            "close": close_aligned,
+            "state": state_aligned,
+            "position": position,
+            "market_return": market_return,
+            "turnover": turnover,
+            "gross_return": gross_return,
+            "net_return": net_return,
+            "equity": equity,
+            "drawdown": drawdown,
+        }
+    )
+
+    metrics = BacktestResult(
+        total_return=total_return,
+        annualized_return=annualized_return,
+        annualized_volatility=float(return_std * np.sqrt(periods_per_year)),
+        sharpe_ratio=float(sharpe),
+        maximum_drawdown=float(drawdown.min()),
+        turnover=float(turnover.sum()),
+        trades=int(np.count_nonzero(turnover.to_numpy() &gt; 0)),
+    )
+    return result_frame, metrics
+</code></pre>
+</div></div></details>
+<details><summary>Full source: plots.py</summary><div><div class="code-wrap">
+<div class="code-head"><span>src/hysteresis_lab/plots.py</span><button class="copy-btn" type="button">Copy</button></div>
+<pre><code>"""Seaborn and Matplotlib visualizations for the research workflow."""
+
+from __future__ import annotations
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+from .metrics import transition_positions
+
+
+sns.set_theme(style="whitegrid", context="notebook")
+
+
+def plot_score_and_state(
+    score: pd.Series,
+    state: pd.Series,
+    upper: float | pd.Series,
+    lower: float | pd.Series,
+    title: str,
+    tail: int = 2_000,
+) -&gt; None:
+    """Plot a score, thresholds, and state-transition markers."""
+    score_view = score.dropna().iloc[-tail:]
+    state_view = state.reindex(score_view.index).fillna(0)
+
+    upper_view = (
+        pd.Series(float(upper), index=score_view.index)
+        if isinstance(upper, (int, float))
+        else upper.reindex(score_view.index)
+    )
+    lower_view = (
+        pd.Series(float(lower), index=score_view.index)
+        if isinstance(lower, (int, float))
+        else lower.reindex(score_view.index)
+    )
+
+    figure, axes = plt.subplots(
+        nrows=2,
+        ncols=1,
+        figsize=(14, 7),
+        sharex=True,
+        gridspec_kw={"height_ratios": [3, 1]},
+    )
+
+    axes[0].plot(score_view.index, score_view, label="Signal score")
+    axes[0].plot(upper_view.index, upper_view, linestyle="--", label="Upper threshold")
+    axes[0].plot(lower_view.index, lower_view, linestyle="--", label="Lower threshold")
+    axes[0].axhline(0, linewidth=1)
+
+    positions = transition_positions(state_view)
+    if len(positions):
+        transition_index = state_view.index[positions]
+        axes[0].scatter(
+            transition_index,
+            score_view.reindex(transition_index),
+            marker="o",
+            label="State change",
+        )
+
+    axes[0].set_title(title)
+    axes[0].set_ylabel("Score")
+    axes[0].legend(loc="best")
+
+    axes[1].step(state_view.index, state_view, where="post")
+    axes[1].set_ylabel("State")
+    axes[1].set_xlabel("Time")
+    axes[1].set_yticks([-1, 0, 1])
+
+    figure.tight_layout()
+    plt.show()
+
+
+def plot_fold_metrics(fold_results: pd.DataFrame) -&gt; None:
+    """Plot out-of-sample walk-forward metrics by fold."""
+    metrics = fold_results.melt(
+        id_vars="fold",
+        value_vars=[
+            "test_continuation_hit_rate",
+            "test_false_reversal_rate",
+            "test_noise_reduction",
+        ],
+        var_name="metric",
+        value_name="value",
+    )
+    plt.figure(figsize=(11, 5))
+    sns.lineplot(data=metrics, x="fold", y="value", hue="metric", marker="o")
+    plt.ylim(0, 1)
+    plt.title("Out-of-sample signal quality by walk-forward fold")
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_equity(backtest_frame: pd.DataFrame, title: str) -&gt; None:
+    """Plot equity and drawdown in separate figures."""
+    plt.figure(figsize=(12, 4))
+    backtest_frame["equity"].plot()
+    plt.title(title)
+    plt.ylabel("Equity multiple")
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(12, 3))
+    backtest_frame["drawdown"].plot()
+    plt.title("Drawdown")
+    plt.ylabel("Drawdown")
+    plt.tight_layout()
+    plt.show()
+</code></pre>
+</div></div></details>
+</section>
+</div>
+<footer class="footer">Adaptive Hysteresis for Financial Signals · self-contained handbook and local implementation project</footer>
+</main>
+</div>
+<script>
+const sidebar = document.getElementById('sidebar');
+document.getElementById('mobileToggle').addEventListener('click', () => sidebar.classList.toggle('open'));
+document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', () => sidebar.classList.remove('open')));
+document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+const navSearch = document.getElementById('navSearch');
+navSearch.addEventListener('input', () => {
+  const query = navSearch.value.toLowerCase();
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.style.display = link.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+});
+
+const chapterBoxes = [...document.querySelectorAll('.chapter-check input')];
+const storageKey = 'adaptive-hysteresis-handbook-progress-v1';
+function safeStorageGet(key) { try { return window.localStorage.getItem(key); } catch (_) { return null; } }
+function safeStorageSet(key, value) { try { window.localStorage.setItem(key, value); } catch (_) {} }
+function loadProgress() {
+  const saved = JSON.parse(safeStorageGet(storageKey) || '{}');
+  chapterBoxes.forEach(box => {
+    const id = box.closest('.chapter').id;
+    box.checked = Boolean(saved[id]);
+  });
+  updateProgress();
+}
+function updateProgress() {
+  const complete = chapterBoxes.filter(box => box.checked).length;
+  document.getElementById('progressFill').style.width = `${100 * complete / chapterBoxes.length}%`;
+  document.getElementById('progressText').textContent = `${complete} of ${chapterBoxes.length} chapters completed`;
+  const saved = {};
+  chapterBoxes.forEach(box => saved[box.closest('.chapter').id] = box.checked);
+  safeStorageSet(storageKey, JSON.stringify(saved));
+}
+chapterBoxes.forEach(box => box.addEventListener('change', updateProgress));
+document.getElementById('resetBtn').addEventListener('click', () => {
+  chapterBoxes.forEach(box => box.checked = false);
+  updateProgress();
+});
+loadProgress();
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      const current = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+      if (current) current.classList.add('active');
+    }
+  });
+}, {rootMargin: '-25% 0px -65% 0px'});
+document.querySelectorAll('.chapter').forEach(section => observer.observe(section));
+
+document.querySelectorAll('.copy-btn').forEach(button => {
+  button.addEventListener('click', async () => {
+    const text = button.closest('.code-wrap').querySelector('code').innerText;
+    await navigator.clipboard.writeText(text);
+    const original = button.textContent;
+    button.textContent = 'Copied';
+    setTimeout(() => button.textContent = original, 1100);
+  });
+});
+
+const glossarySearch = document.getElementById('glossarySearch');
+if (glossarySearch) glossarySearch.addEventListener('input', () => {
+  const query = glossarySearch.value.toLowerCase();
+  document.querySelectorAll('.glossary-item').forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+});
+
+
+// ---------- Shared chart helpers ----------
+function seededRandom(seed) {
+  let value = seed % 2147483647;
+  return () => {
+    value = value * 16807 % 2147483647;
+    return (value - 1) / 2147483646;
+  };
+}
+function clamp(value, lo, hi) { return Math.max(lo, Math.min(hi, value)); }
+function mean(values) { return values.length ? values.reduce((a,b) => a+b, 0) / values.length : 0; }
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a,b) => a-b);
+  const m = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[m] : (sorted[m-1] + sorted[m]) / 2;
+}
+function rollingMean(values, window) {
+  const out = new Array(values.length).fill(null);
+  let sum = 0;
+  for (let i=0; i<values.length; i++) {
+    sum += values[i];
+    if (i >= window) sum -= values[i-window];
+    if (i >= window-1) out[i] = sum / window;
+  }
+  return out;
+}
+function rollingStd(values, window) {
+  const out = new Array(values.length).fill(null);
+  for (let i=window-1; i<values.length; i++) {
+    const slice = values.slice(i-window+1, i+1).filter(Number.isFinite);
+    const m = mean(slice);
+    out[i] = Math.sqrt(mean(slice.map(v => (v-m)**2)));
+  }
+  return out;
+}
+function rollingMedian(values, window) {
+  const out = new Array(values.length).fill(null);
+  for (let i=window-1; i<values.length; i++) out[i] = median(values.slice(i-window+1, i+1).filter(Number.isFinite));
+  return out;
+}
+function ema(values, span) {
+  const alpha = 2 / (span + 1);
+  const out = new Array(values.length).fill(null);
+  let current = values[0];
+  out[0] = current;
+  for (let i=1; i<values.length; i++) { current = alpha * values[i] + (1-alpha) * current; out[i] = current; }
+  return out;
+}
+function trueRange(high, low, close) {
+  return close.map((c,i) => i === 0 ? high[i]-low[i] : Math.max(high[i]-low[i], Math.abs(high[i]-close[i-1]), Math.abs(low[i]-close[i-1])));
+}
+function schmittSeries(score, upper, lower, confirmation=1, gateUp=null, gateDown=null) {
+  let state = 0, upCount = 0, downCount = 0;
+  const states = [];
+  for (let i=0; i<score.length; i++) {
+    const value = score[i], up = Array.isArray(upper) ? upper[i] : upper, lo = Array.isArray(lower) ? lower[i] : lower;
+    const canUp = gateUp ? gateUp[i] : true;
+    const canDown = gateDown ? gateDown[i] : true;
+    if (!Number.isFinite(value) || !Number.isFinite(up) || !Number.isFinite(lo)) { states.push(state); continue; }
+    if (state <= 0) {
+      upCount = value >= up && canUp ? upCount + 1 : 0;
+      if (upCount >= confirmation) { state = 1; upCount = 0; downCount = 0; }
+    }
+    if (state >= 0) {
+      downCount = value <= lo && canDown ? downCount + 1 : 0;
+      if (downCount >= confirmation) { state = -1; upCount = 0; downCount = 0; }
+    }
+    states.push(state);
+  }
+  return states;
+}
+function countFlips(values) {
+  let flips=0, prev=0;
+  for (const v of values) { if (v !== 0) { if (prev !== 0 && v !== prev) flips++; prev=v; } }
+  return flips;
+}
+function transitionPositions(values) {
+  const out=[]; let prev=values[0];
+  for (let i=1;i<values.length;i++) if (values[i] !== prev && values[i] !== 0) { out.push(i); prev=values[i]; }
+  return out;
+}
+function stateDurations(values) {
+  const durations=[]; let prev=0, count=0;
+  for (const value of values) {
+    if (value === 0) continue;
+    if (prev === 0 || value === prev) count++;
+    else { durations.push(count); count=1; }
+    prev=value;
+  }
+  if (count) durations.push(count);
+  return durations;
+}
+function quickReversals(values, window=8) {
+  const transitions = transitionPositions(values); let quick=0;
+  for (let i=1;i<transitions.length;i++) if (transitions[i]-transitions[i-1] <= window) quick++;
+  return quick;
+}
+function continuationRate(close, states, horizon=12, minMove=0) {
+  const positions=transitionPositions(states); let hits=0, valid=0;
+  for (const i of positions) {
+    if (i+horizon >= close.length || states[i]===0) continue;
+    const ret=(close[i+horizon]/close[i]-1)*states[i]; valid++;
+    if (ret >= minMove) hits++;
+  }
+  return valid ? hits/valid : 0;
+}
+function kalmanLocalLevel(values, q=0.02, r=0.18) {
+  const out=[]; let x=values[0], p=1;
+  for (const z of values) {
+    p += q;
+    const k = p/(p+r);
+    x = x + k*(z-x);
+    p = (1-k)*p;
+    out.push(x);
+  }
+  return out;
+}
+function nextPow2(n) { let p=1; while(p<n) p*=2; return p; }
+function haarDenoise(values, strength=0.65) {
+  // Batch Haar DWT with soft thresholding. Educational/offline only: it uses the full selected sequence.
+  const n=nextPow2(values.length); const data=values.slice();
+  while(data.length<n) data.push(data[data.length-1]);
+  const coeff=data.slice(); let length=n;
+  while(length>1) {
+    const temp=new Array(length);
+    for(let i=0;i<length;i+=2){ temp[i/2]=(coeff[i]+coeff[i+1])/Math.sqrt(2); temp[length/2+i/2]=(coeff[i]-coeff[i+1])/Math.sqrt(2); }
+    for(let i=0;i<length;i++) coeff[i]=temp[i];
+    length/=2;
+  }
+  const details=coeff.slice(1).map(Math.abs); const sigma=median(details)/0.6745 || 0;
+  const threshold=strength*sigma*Math.sqrt(2*Math.log(n));
+  for(let i=1;i<n;i++) coeff[i]=Math.sign(coeff[i])*Math.max(0,Math.abs(coeff[i])-threshold);
+  length=2;
+  while(length<=n){
+    const temp=new Array(length);
+    const half=length/2;
+    for(let i=0;i<half;i++){ temp[2*i]=(coeff[i]+coeff[half+i])/Math.sqrt(2); temp[2*i+1]=(coeff[i]-coeff[half+i])/Math.sqrt(2); }
+    for(let i=0;i<length;i++) coeff[i]=temp[i];
+    length*=2;
+  }
+  return coeff.slice(0,values.length);
+}
+function setupCanvas(canvas) {
+  const rect=canvas.getBoundingClientRect(); const dpr=window.devicePixelRatio || 1;
+  const width=Math.max(320,rect.width), height=parseFloat(getComputedStyle(canvas).height) || 300;
+  canvas.width=Math.round(width*dpr); canvas.height=Math.round(height*dpr);
+  const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,width,height);
+  return {ctx,width,height};
+}
+function drawLine(ctx, values, mapX, mapY, stroke='#54798a', lineWidth=1.8, dash=[]) {
+  ctx.save(); ctx.strokeStyle=stroke; ctx.lineWidth=lineWidth; ctx.setLineDash(dash); ctx.beginPath(); let started=false;
+  values.forEach((v,i)=>{ if(!Number.isFinite(v)){started=false;return;} const x=mapX(i),y=mapY(v); if(!started){ctx.moveTo(x,y);started=true;} else ctx.lineTo(x,y); });
+  ctx.stroke(); ctx.restore();
+}
+function drawAxes(ctx,x0,y0,w,h,minY,maxY,label='') {
+  ctx.save(); ctx.strokeStyle='#d9e3e0'; ctx.lineWidth=1; ctx.fillStyle='#718184'; ctx.font='11px system-ui';
+  for(let k=0;k<=4;k++){const y=y0+h*k/4;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x0+w,y);ctx.stroke();const value=maxY-(maxY-minY)*k/4;ctx.fillText(value.toFixed(Math.abs(maxY-minY)<5?2:1),4,y+4);}
+  if(label) ctx.fillText(label,x0,y0-7); ctx.restore();
+}
+function generateMarket(noise=0.65, n=2300) {
+  const random=seededRandom(92731); const close=[],high=[],low=[],open=[],volume=[]; let price=100;
+  for(let i=0;i<n;i++){
+    let drift=0;
+    if(i<450) drift=0.008; else if(i<800) drift=-0.004; else if(i<1250) drift=0.013; else if(i<1600) drift=-0.015; else if(i<1950) drift=0.002; else drift=0.010;
+    const cyc=0.045*Math.sin(i*0.19)+0.026*Math.sin(i*0.73)+0.018*Math.sin(i*1.41);
+    const shock=(random()-0.5)*0.22*noise + (random()<0.004 ? (random()-0.5)*1.8 : 0);
+    const prev=price; price=Math.max(20,price*(1+(drift+cyc*noise+shock)/100));
+    const range=price*(0.0008+0.0018*noise*random());
+    open.push(prev); close.push(price); high.push(Math.max(prev,price)+range); low.push(Math.min(prev,price)-range); volume.push(800+900*Math.abs(shock)+350*random());
+  }
+  return {open,high,low,close,volume};
+}
+const marketCache={};
+function getMarket(noise=0.65){ const key=noise.toFixed(2); if(!marketCache[key]) marketCache[key]=generateMarket(noise); return marketCache[key]; }
+function variantName(key){return ({percent:'percent_band',std:'std_band',tr:'tr_band',confirmed:'confirmed_band',kalman:'kalman_schmitt',multi:'multi_timeframe_schmitt',wavelet:'wavelet_schmitt',dynamic:'dynamic_adaptive_band',asymmetric:'mixed_asymmetric_band'})[key] || key;}
+function computeVariant(key, market, params) {
+  const {close,high,low}=market; const n=close.length; const ma=rollingMean(close,params.maWindow);
+  const tr=trueRange(high,low,close), atr=rollingMean(tr,Math.max(14,Math.round(params.maWindow/3)));
+  const residual=close.map((v,i)=>Number.isFinite(ma[i])?v-ma[i]:null);
+  const residualPast=[null,...residual.slice(0,-1)].map(v=>Number.isFinite(v)?v:0); const residualStd=rollingStd(residualPast,Math.max(20,Math.min(144,params.maWindow))); const atrPast=[null,...atr.slice(0,-1)];
+  let reference=ma.slice(), upperAbs=new Array(n).fill(null), lowerAbs=new Array(n).fill(null), score=residual.slice(), upperScore=new Array(n).fill(0), lowerScore=new Array(n).fill(0), confirmation=1, gateUp=null, gateDown=null;
+  let note='';
+  if(key==='percent' || key==='confirmed' || key==='asymmetric'){
+    confirmation=key==='confirmed'?params.confirmation:1;
+    for(let i=0;i<n;i++) if(Number.isFinite(ma[i])){
+      const upPct=key==='asymmetric'?params.upperPct:params.basePct;
+      const loPct=key==='asymmetric'?params.lowerPct:params.basePct;
+      upperAbs[i]=ma[i]*(1+upPct/100); lowerAbs[i]=ma[i]*(1-loPct/100);
+      upperScore[i]=ma[i]*upPct/100; lowerScore[i]=-ma[i]*loPct/100;
+    }
+    note=key==='confirmed'?'Fixed MA band; reversal needs consecutive bars beyond the opposite boundary.':key==='asymmetric'?'Upper and lower distances are optimized independently, allowing different sensitivity by direction.':'Fixed symmetric percentage distance around the selected MA.';
+  } else if(key==='std'){
+    for(let i=0;i<n;i++) if(Number.isFinite(ma[i])&&Number.isFinite(residualStd[i])){ const width=params.stdMult*residualStd[i]; upperAbs[i]=ma[i]+width;lowerAbs[i]=ma[i]-width;upperScore[i]=width;lowerScore[i]=-width; }
+    note='Band expands when recent price–MA residuals are more dispersed.';
+  } else if(key==='tr'){
+    for(let i=0;i<n;i++) if(Number.isFinite(ma[i])&&Number.isFinite(atrPast[i])){ const width=params.atrMult*atrPast[i];upperAbs[i]=ma[i]+width;lowerAbs[i]=ma[i]-width;upperScore[i]=width;lowerScore[i]=-width; }
+    note='Band uses rolling true range, so gaps and intrabar range affect its width.';
+  } else if(key==='kalman'){
+    reference=kalmanLocalLevel(close,0.012,0.14); score=close.map((v,i)=>v-reference[i]); const kstd=rollingStd([null,...score.slice(0,-1)].map(v=>Number.isFinite(v)?v:0),48);
+    for(let i=0;i<n;i++) if(Number.isFinite(kstd[i])){const width=params.stdMult*kstd[i];upperAbs[i]=reference[i]+width;lowerAbs[i]=reference[i]-width;upperScore[i]=width;lowerScore[i]=-width;}
+    note='A local-level Kalman estimate supplies the reference; hysteresis still performs the discrete state transition.';
+  } else if(key==='multi'){
+    const slowWindow=Math.min(n-1,Math.max(params.maWindow*6,288)); const slow=rollingMean(close,slowWindow);
+    gateUp=ma.map((v,i)=>Number.isFinite(v)&&Number.isFinite(slow[i])&&v>slow[i]); gateDown=ma.map((v,i)=>Number.isFinite(v)&&Number.isFinite(slow[i])&&v<slow[i]);
+    for(let i=0;i<n;i++) if(Number.isFinite(ma[i])){const width=ma[i]*params.basePct/100;upperAbs[i]=ma[i]+width;lowerAbs[i]=ma[i]-width;upperScore[i]=width;lowerScore[i]=-width;}
+    note='The fast MA band triggers only when the fast reference agrees with a slower trend context.';
+  } else if(key==='wavelet'){
+    const den=haarDenoise(close,clamp(params.dynamicStrength/2,0.1,1.5)); reference=rollingMean(den,params.maWindow); score=den.map((v,i)=>Number.isFinite(reference[i])?v-reference[i]:null); const wstd=rollingStd([null,...score.slice(0,-1)].map(v=>Number.isFinite(v)?v:0),48);
+    for(let i=0;i<n;i++) if(Number.isFinite(reference[i])&&Number.isFinite(wstd[i])){const width=params.stdMult*wstd[i];upperAbs[i]=reference[i]+width;lowerAbs[i]=reference[i]-width;upperScore[i]=width;lowerScore[i]=-width;}
+    note='Batch Haar denoising reduces high-frequency variation before the score is formed. This illustration is non-causal unless redesigned as a rolling transform.';
+  } else if(key==='dynamic'){
+    const relVol=atrPast.map((v,i)=>Number.isFinite(v)&&Number.isFinite(ma[i])?v/ma[i]:null); const baseVol=rollingMedian(relVol.map(v=>Number.isFinite(v)?v:0),144);
+    for(let i=0;i<n;i++) if(Number.isFinite(ma[i])&&Number.isFinite(relVol[i])&&Number.isFinite(baseVol[i])&&baseVol[i]>0){const ratio=clamp(relVol[i]/baseVol[i],0.45,2.8);const width=ma[i]*params.basePct/100*Math.pow(ratio,params.dynamicStrength);const safe=Math.max(ma[i]*0.0001,width);upperAbs[i]=ma[i]+safe;lowerAbs[i]=ma[i]-safe;upperScore[i]=safe;lowerScore[i]=-safe;}
+    note='The percentage band changes continuously with current volatility relative to its rolling baseline.';
+  }
+  const states=schmittSeries(score,upperScore,lowerScore,confirmation,gateUp,gateDown);
+  const raw=score.map(v=>Number.isFinite(v)?(v>=0?1:-1):0);
+  const widths=upperAbs.map((v,i)=>Number.isFinite(v)&&Number.isFinite(lowerAbs[i])?v-lowerAbs[i]:null).filter(Number.isFinite);
+  return {key,reference,upperAbs,lowerAbs,score,states,raw,note,metrics:{events:transitionPositions(states).length,flips:countFlips(states),rawFlips:countFlips(raw),quick:quickReversals(states,8),medianDuration:median(stateDurations(states)),meanBand:mean(widths),continuation:continuationRate(close,states,12,0)}};
+}
+function drawVariant(canvas, market, result, visibleBars) {
+  const {ctx,width,height}=setupCanvas(canvas); const start=Math.max(0,market.close.length-visibleBars); const end=market.close.length;
+  const close=market.close.slice(start,end), ref=result.reference.slice(start,end), upper=result.upperAbs.slice(start,end), lower=result.lowerAbs.slice(start,end), states=result.states.slice(start,end), raw=result.raw.slice(start,end);
+  const finite=[...close,...ref,...upper,...lower].filter(Number.isFinite); const minY=Math.min(...finite),maxY=Math.max(...finite),pad=(maxY-minY)*0.08||1;
+  const x0=48,w=width-60,top=22,priceH=height-112,stateTop=height-65,stateH=38; const mapX=i=>x0+w*i/Math.max(1,close.length-1); const mapY=v=>top+priceH*(maxY+pad-v)/(maxY-minY+2*pad);
+  drawAxes(ctx,x0,top,w,priceH,minY-pad,maxY+pad,'price and derived reference');
+  ctx.save(); ctx.fillStyle='rgba(120,155,131,.12)'; ctx.beginPath();
+  let started=false; upper.forEach((v,i)=>{if(Number.isFinite(v)){const x=mapX(i),y=mapY(v);if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);}});
+  for(let i=lower.length-1;i>=0;i--){if(Number.isFinite(lower[i]))ctx.lineTo(mapX(i),mapY(lower[i]));} ctx.closePath();ctx.fill();ctx.restore();
+  drawLine(ctx,upper,mapX,mapY,'#c88d5d',1.3,[5,4]); drawLine(ctx,lower,mapX,mapY,'#c88d5d',1.3,[5,4]);
+  drawLine(ctx,ref,mapX,mapY,'#789b83',1.7); drawLine(ctx,close,mapX,mapY,'#54798a',1.9);
+  const trans=transitionPositions(states); ctx.save(); trans.forEach(i=>{const y=mapY(close[i]);ctx.fillStyle=states[i]>0?'#4f8b68':'#a65d61';ctx.beginPath();ctx.arc(mapX(i),y,3.5,0,Math.PI*2);ctx.fill();});ctx.restore();
+  const stateY=v=>stateTop+stateH*(1-v)/2; ctx.strokeStyle='#d7e2df';ctx.beginPath();ctx.moveTo(x0,stateY(0));ctx.lineTo(x0+w,stateY(0));ctx.stroke();
+  drawLine(ctx,raw,mapX,stateY,'#aab5b7',1.1); drawLine(ctx,states,mapX,stateY,'#54798a',2.5);
+  ctx.fillStyle='#718184';ctx.font='11px system-ui';ctx.fillText('raw + filtered state',x0,stateTop-6);
+}
+function statHtml(result){const m=result.metrics;const reduction=m.rawFlips?100*(1-m.flips/m.rawFlips):0;return `<div class="viz-stat"><strong>${m.events}</strong><small>state changes</small></div><div class="viz-stat"><strong>${m.quick}</strong><small>quick reversals</small></div><div class="viz-stat"><strong>${m.medianDuration.toFixed(0)}</strong><small>median bars/state</small></div><div class="viz-stat"><strong>${reduction.toFixed(0)}%</strong><small>raw-flip reduction</small></div><div class="viz-stat"><strong>${(100*m.continuation).toFixed(0)}%</strong><small>12-bar continuation</small></div>`;}
+function getVariantParams(){return {maWindow:Number(document.getElementById('maWindow').value),visibleBars:Number(document.getElementById('visibleBars').value),basePct:Number(document.getElementById('basePct').value),stdMult:Number(document.getElementById('stdMult').value),atrMult:Number(document.getElementById('atrMult').value),confirmation:Number(document.getElementById('confirmBars').value),upperPct:Number(document.getElementById('upperPct').value),lowerPct:Number(document.getElementById('lowerPct').value),dynamicStrength:Number(document.getElementById('dynamicStrength').value),noise:Number(document.getElementById('labNoise').value),minEvents:Number(document.getElementById('labMinEvents').value)};}
+function updateVariantLab(){
+  if(!document.getElementById('variantLab'))return; const p=getVariantParams();
+  document.getElementById('maWindowValue').textContent=p.maWindow;document.getElementById('visibleBarsValue').textContent=p.visibleBars;document.getElementById('basePctValue').textContent=p.basePct.toFixed(2)+'%';document.getElementById('stdMultValue').textContent=p.stdMult.toFixed(2);document.getElementById('atrMultValue').textContent=p.atrMult.toFixed(2);document.getElementById('confirmBarsValue').textContent=p.confirmation;document.getElementById('upperPctValue').textContent=p.upperPct.toFixed(2)+'%';document.getElementById('lowerPctValue').textContent=p.lowerPct.toFixed(2)+'%';document.getElementById('dynamicValue').textContent=p.dynamicStrength.toFixed(2);document.getElementById('labNoiseValue').textContent=p.noise.toFixed(2);document.getElementById('labMinEventsValue').textContent=p.minEvents;
+  const market=getMarket(p.noise), aKey=document.getElementById('variantA').value,bKey=document.getElementById('variantB').value; const a=computeVariant(aKey,market,p),b=computeVariant(bKey,market,p);
+  document.getElementById('variantATitle').textContent=variantName(aKey);document.getElementById('variantBTitle').textContent=variantName(bKey);drawVariant(document.getElementById('variantCanvasA'),market,a,p.visibleBars);drawVariant(document.getElementById('variantCanvasB'),market,b,p.visibleBars);document.getElementById('variantStatsA').innerHTML=statHtml(a);document.getElementById('variantStatsB').innerHTML=statHtml(b);document.getElementById('variantNoteA').textContent=a.note+(a.metrics.events<p.minEvents?' Warning: this setting produces too few transitions for the selected minimum.':'');document.getElementById('variantNoteB').textContent=b.note+(b.metrics.events<p.minEvents?' Warning: this setting produces too few transitions for the selected minimum.':'');
+  const keys=['percent','std','tr','confirmed','kalman','multi','wavelet','dynamic','asymmetric']; const body=document.getElementById('variantComparisonBody'); body.innerHTML=keys.map(k=>{const r=computeVariant(k,market,p);return `<tr class="${k===aKey||k===bKey?'selected':''}"><td>${variantName(k)}</td><td>${r.metrics.events}</td><td>${r.metrics.quick}</td><td>${r.metrics.medianDuration.toFixed(0)} bars</td><td>${r.metrics.meanBand.toFixed(3)}</td><td>${(100*r.metrics.continuation).toFixed(0)}%</td><td>${r.metrics.events>=p.minEvents?'✓ enough events':'⚠ too few'}</td></tr>`;}).join('');
+}
+if(document.getElementById('variantLab')){['variantA','variantB','maWindow','visibleBars','basePct','stdMult','atrMult','confirmBars','upperPct','lowerPct','dynamicStrength','labNoise','labMinEvents'].forEach(id=>document.getElementById(id).addEventListener('input',updateVariantLab));updateVariantLab();}
+
+// ---------- Chapter 1: architecture explorer ----------
+const pipelineData=[
+  ['OHLCV and timestamps','Validated, ordered candles','Prevents invalid or duplicated observations entering research'],
+  ['Current and past candles','A documented continuous score','Prevents mixing signal definition with position rules'],
+  ['Score plus upper/lower boundaries','Stable state with memory','Prevents chatter near one decision boundary'],
+  ['Frozen parameters and unseen next block','Out-of-sample metrics','Prevents using future results to choose the threshold'],
+  ['Fold metrics, costs and diagnostics','Reproducible research report','Prevents one attractive chart from hiding instability']
+];
+let pipelineStep=0;
+function updatePipeline(){const canvas=document.getElementById('pipelineCanvas');if(!canvas)return;const {ctx,width,height}=setupCanvas(canvas);const margin=25,boxW=(width-2*margin-4*22)/5, y=65;ctx.font='12px system-ui';for(let i=0;i<5;i++){const x=margin+i*(boxW+22);ctx.fillStyle=i===pipelineStep?'#dcebe6':'#f4f7f6';ctx.strokeStyle=i===pipelineStep?'#54798a':'#ccd9d5';ctx.lineWidth=i===pipelineStep?2:1;ctx.beginPath();ctx.roundRect(x,y,boxW,70,10);ctx.fill();ctx.stroke();ctx.fillStyle='#40595d';ctx.textAlign='center';ctx.fillText(['Data','Score','Filter','Validate','Report'][i],x+boxW/2,y+38);if(i<4){ctx.strokeStyle='#789b83';ctx.beginPath();ctx.moveTo(x+boxW+4,y+35);ctx.lineTo(x+boxW+18,y+35);ctx.stroke();}}document.getElementById('pipelineNote').innerHTML=`<strong>Input:</strong> ${pipelineData[pipelineStep][0]} · <strong>Output:</strong> ${pipelineData[pipelineStep][1]}<br>${pipelineData[pipelineStep][2]}`;}
+if(document.getElementById('pipelineSteps'))document.querySelectorAll('#pipelineSteps .mini-step').forEach(btn=>btn.addEventListener('click',()=>{pipelineStep=Number(btn.dataset.step);document.querySelectorAll('#pipelineSteps .mini-step').forEach(b=>b.classList.toggle('active',b===btn));updatePipeline();}));updatePipeline();
+
+// ---------- Chapter 3: event definitions ----------
+function updateResearch(){const canvas=document.getElementById('researchCanvas');if(!canvas)return;const horizon=Number(document.getElementById('rqHorizon').value),reverse=Number(document.getElementById('rqReverse').value),minMove=Number(document.getElementById('rqMove').value)/100;document.getElementById('rqHorizonValue').textContent=horizon+' bars';document.getElementById('rqReverseValue').textContent=reverse+' bars';document.getElementById('rqMoveValue').textContent=(minMove*100).toFixed(2)+'%';const market=getMarket(.62),p={maWindow:48,basePct:.45,stdMult:1.2,atrMult:1.3,confirmation:2,upperPct:.6,lowerPct:.3,dynamicStrength:1.2},r=computeVariant('percent',market,p),start=market.close.length-360,states=r.states.slice(start),close=market.close.slice(start),trans=transitionPositions(states);const {ctx,width,height}=setupCanvas(canvas),x0=42,w=width-55,top=20,h=height-55,min=Math.min(...close),max=Math.max(...close),mapX=i=>x0+w*i/(close.length-1),mapY=v=>top+h*(max-v)/(max-min);drawAxes(ctx,x0,top,w,h,min,max,'events: green continuation, red quick reversal, amber insufficient move');drawLine(ctx,close,mapX,mapY,'#54798a',1.7);let cont=0,quick=0,weak=0;trans.forEach((i,idx)=>{if(i+horizon>=close.length)return;const next=idx+1<trans.length?trans[idx+1]:9999;const isQuick=next-i<=reverse;const ret=(close[i+horizon]/close[i]-1)*states[i];let color='#c88d5d';if(isQuick){color='#a65d61';quick++;}else if(ret>=minMove){color='#4f8b68';cont++;}else weak++;ctx.fillStyle=color;ctx.beginPath();ctx.arc(mapX(i),mapY(close[i]),5,0,Math.PI*2);ctx.fill();});document.getElementById('researchStats').innerHTML=`<div class="viz-stat"><strong>${trans.length}</strong><small>transition events</small></div><div class="viz-stat"><strong>${cont}</strong><small>continuations</small></div><div class="viz-stat"><strong>${quick}</strong><small>quick reversals</small></div><div class="viz-stat"><strong>${weak}</strong><small>weak moves</small></div><div class="viz-stat"><strong>${trans.length?(100*cont/trans.length).toFixed(0):0}%</strong><small>event hit rate</small></div>`;}
+if(document.getElementById('researchCanvas'))['rqHorizon','rqReverse','rqMove'].forEach(id=>document.getElementById(id).addEventListener('input',updateResearch));updateResearch();
+
+// ---------- Chapter 4: stack map ----------
+const stackMap={data:['ccxt','pandas','pyarrow'],optuna:['optuna','scikit-learn'],plots:['matplotlib','seaborn','plotly'],speed:['numba','numpy'],notebook:['jupyterlab','ipywidgets']};
+function updateStack(){const canvas=document.getElementById('stackCanvas');if(!canvas)return;const active=[...document.querySelectorAll('#stackToggles .toggle-chip.active')].map(b=>b.dataset.stack);const packages=[...new Set(active.flatMap(k=>stackMap[k]))];const {ctx,width,height}=setupCanvas(canvas);ctx.font='12px system-ui';const left=22,top=28,row=35;packages.forEach((pkg,i)=>{const y=top+i*row;ctx.fillStyle='#edf4f1';ctx.strokeStyle='#cbdad5';ctx.beginPath();ctx.roundRect(left,y,130,25,8);ctx.fill();ctx.stroke();ctx.fillStyle='#40595d';ctx.fillText(pkg,left+12,y+17);const usedBy=active.filter(k=>stackMap[k].includes(pkg));usedBy.forEach((k,j)=>{const x=190+j*105;ctx.fillStyle='#e7eef2';ctx.fillRect(x,y+3,90,19);ctx.fillStyle='#52686a';ctx.fillText(k,x+8,y+17);});});document.getElementById('stackNote').textContent=packages.length?`Selected capabilities require ${packages.length} distinct packages: ${packages.join(', ')}.`:'Choose at least one capability.';}
+if(document.getElementById('stackToggles'))document.querySelectorAll('#stackToggles .toggle-chip').forEach(b=>b.addEventListener('click',()=>{b.classList.toggle('active');updateStack();}));updateStack();
+
+// ---------- Chapter 5: pagination ----------
+function updatePagination(){const canvas=document.getElementById('paginationCanvas');if(!canvas)return;const days=Number(document.getElementById('historyDays').value),limit=Number(document.getElementById('requestLimit').value),minutes=Number(document.getElementById('timeframeSelect').value);const candles=Math.ceil(days*24*60/minutes),calls=Math.ceil(candles/limit);document.getElementById('historyDaysValue').textContent=days+' days';document.getElementById('requestLimitValue').textContent=limit;const {ctx,width,height}=setupCanvas(canvas),x0=25,w=width-50,y=70,h=55,shown=Math.min(calls,60);for(let i=0;i<shown;i++){const bw=w/shown-1;ctx.fillStyle=i===shown-1&&candles%limit?'#cbded6':'#dce8ee';ctx.fillRect(x0+i*w/shown,y,bw,h);if(shown<=25){ctx.fillStyle='#5d7377';ctx.font='9px system-ui';ctx.fillText(String(i+1),x0+i*w/shown+2,y+h+14);}}ctx.fillStyle='#53696c';ctx.font='12px system-ui';ctx.fillText(calls>60?`First 60 of ${calls} requests shown`:`${calls} paginated requests`,x0,35);ctx.fillText('Oldest requested candle → newest available candle',x0,y+h+38);document.getElementById('paginationStats').innerHTML=`<div class="viz-stat"><strong>${candles.toLocaleString()}</strong><small>requested candles</small></div><div class="viz-stat"><strong>${calls}</strong><small>minimum API calls</small></div><div class="viz-stat"><strong>${minutes}m</strong><small>timeframe</small></div><div class="viz-stat"><strong>${limit}</strong><small>request limit</small></div><div class="viz-stat"><strong>${((candles%limit)||limit).toLocaleString()}</strong><small>last batch size</small></div>`;}
+if(document.getElementById('paginationCanvas'))['historyDays','requestLimit','timeframeSelect'].forEach(id=>document.getElementById(id).addEventListener('input',updatePagination));updatePagination();
+
+// ---------- Chapter 6: data quality ----------
+function updateQuality(){const canvas=document.getElementById('qualityCanvas');if(!canvas)return;const gaps=Number(document.getElementById('gapSlider').value),dups=Number(document.getElementById('dupSlider').value),spikes=Number(document.getElementById('spikeSlider').value);document.getElementById('gapValue').textContent=gaps;document.getElementById('dupValue').textContent=dups;document.getElementById('spikeValue').textContent=spikes;const random=seededRandom(442),n=220,base=[];let p=100;for(let i=0;i<n;i++){p*=1+(0.018*Math.sin(i*.13)+(random()-.5)*.05)/100;base.push(p);}const gapSet=new Set(Array.from({length:gaps},(_,i)=>20+Math.floor(i*(n-50)/Math.max(1,gaps))));const spikeSet=new Set(Array.from({length:spikes},(_,i)=>40+Math.floor(i*(n-80)/Math.max(1,spikes))));const data=base.map((v,i)=>gapSet.has(i)?null:(spikeSet.has(i)?v*(i%2?1.06:.94):v));const {ctx,width,height}=setupCanvas(canvas),x0=42,w=width-55,top=22,h=height-55,finite=data.filter(Number.isFinite),min=Math.min(...finite),max=Math.max(...finite),mapX=i=>x0+w*i/(n-1),mapY=v=>top+h*(max-v)/(max-min);drawAxes(ctx,x0,top,w,h,min,max,'synthetic close; red = contaminant, blank = missing');drawLine(ctx,data,mapX,mapY,'#54798a',1.8);spikeSet.forEach(i=>{ctx.fillStyle='#a65d61';ctx.beginPath();ctx.arc(mapX(i),mapY(data[i]),5,0,Math.PI*2);ctx.fill();});gapSet.forEach(i=>{ctx.strokeStyle='#c88d5d';ctx.beginPath();ctx.moveTo(mapX(i),top);ctx.lineTo(mapX(i),top+h);ctx.stroke();});document.getElementById('qualityStats').innerHTML=`<div class="viz-stat"><strong>${gaps}</strong><small>missing intervals</small></div><div class="viz-stat"><strong>${dups}</strong><small>duplicate keys</small></div><div class="viz-stat"><strong>${spikes}</strong><small>flagged spikes</small></div><div class="viz-stat"><strong>${n-gaps}</strong><small>unique observed bars</small></div><div class="viz-stat"><strong>${gaps+dups+spikes}</strong><small>issues requiring review</small></div>`;}
+if(document.getElementById('qualityCanvas'))['gapSlider','dupSlider','spikeSlider'].forEach(id=>document.getElementById(id).addEventListener('input',updateQuality));updateQuality();
+
+// ---------- Chapter 7: signal contract ----------
+function rsi(values,window=14){const out=new Array(values.length).fill(null);let gains=0,losses=0;for(let i=1;i<values.length;i++){const d=values[i]-values[i-1],g=Math.max(d,0),l=Math.max(-d,0);if(i<=window){gains+=g;losses+=l;if(i===window)out[i]=100-100/(1+(gains/window)/(losses/window||1e-9));}else{gains=(gains*(window-1)+g)/window;losses=(losses*(window-1)+l)/window;out[i]=100-100/(1+gains/(losses||1e-9));}}return out;}
+function rollingMin(values,w){return values.map((_,i)=>i<w-1?null:Math.min(...values.slice(i-w+1,i+1)));}function rollingMax(values,w){return values.map((_,i)=>i<w-1?null:Math.max(...values.slice(i-w+1,i+1)));}
+function normalizeSeries(values,mode,w){if(mode==='raw')return values;const out=new Array(values.length).fill(null);for(let i=w-1;i<values.length;i++){const s=values.slice(i-w+1,i+1).filter(Number.isFinite),v=values[i];if(!Number.isFinite(v)||!s.length)continue;if(mode==='z'){const m=mean(s),sd=Math.sqrt(mean(s.map(x=>(x-m)**2)))||1;out[i]=(v-m)/sd;}else{const med=median(s),mad=median(s.map(x=>Math.abs(x-med)))||1;out[i]=(v-med)/(1.4826*mad);}}return out;}
+function updateContract(){const canvas=document.getElementById('contractCanvas');if(!canvas)return;const family=document.getElementById('contractSignal').value,norm=document.getElementById('contractNorm').value,w=Number(document.getElementById('contractWindow').value);document.getElementById('contractWindowValue').textContent=w;const m=getMarket(.58),c=m.close;let raw,label;if(family==='ma'){const ma=rollingMean(c,w);raw=c.map((v,i)=>Number.isFinite(ma[i])?100*(v/ma[i]-1):null);label='% distance from MA';}else if(family==='rsi'){raw=rsi(c,14).map(v=>Number.isFinite(v)?(v-50)/10:null);label='centered RSI / 10';}else if(family==='donchian'){const hi=[null,...rollingMax(m.high,w).slice(0,-1)],lo=[null,...rollingMin(m.low,w).slice(0,-1)];raw=c.map((v,i)=>Number.isFinite(hi[i])&&hi[i]>lo[i]?2*(v-lo[i])/(hi[i]-lo[i])-1:null);label='channel position [-1,+1]';}else{const ret=c.map((v,i)=>i?Math.log(v/c[i-1]):0),rv=rollingStd(ret,w),base=[null,...rollingMedian(rv.map(v=>v||0),w*2).slice(0,-1)];raw=rv.map((v,i)=>Number.isFinite(v)&&base[i]>0?v/base[i]-1:null);label='relative realized volatility';}const values=normalizeSeries(raw,norm,w),start=values.length-420,view=values.slice(start),finite=view.filter(Number.isFinite),min=Math.min(-1,...finite),max=Math.max(1,...finite);const {ctx,width,height}=setupCanvas(canvas),x0=42,ww=width-55,top=22,hh=height-55,mapX=i=>x0+ww*i/(view.length-1),mapY=v=>top+hh*(max-v)/(max-min);drawAxes(ctx,x0,top,ww,hh,min,max,label);drawLine(ctx,view,mapX,mapY,'#54798a',1.8);ctx.strokeStyle='#c88d5d';ctx.setLineDash([5,4]);[-1,1].forEach(v=>{ctx.beginPath();ctx.moveTo(x0,mapY(v));ctx.lineTo(x0+ww,mapY(v));ctx.stroke();});ctx.setLineDash([]);document.getElementById('contractNote').textContent=`Contract: ${label}; normalization: ${norm==='raw'?'none':norm==='z'?'rolling mean/std':'rolling median/MAD'}. Rolling transformations use only the current and previous ${w-1} observations in this illustration.`;}
+if(document.getElementById('contractCanvas'))['contractSignal','contractNorm','contractWindow'].forEach(id=>document.getElementById(id).addEventListener('input',updateContract));updateContract();
+
+// ---------- Chapter 8: MA explorer ----------
+function updateMaExplorer(){const canvas=document.getElementById('maExplorerCanvas');if(!canvas)return;const win=Number(document.getElementById('maExplorerWindow').value),band=Number(document.getElementById('maExplorerBand').value),bars=Number(document.getElementById('maExplorerBars').value);document.getElementById('maExplorerBandValue').textContent=band.toFixed(2)+'%';document.getElementById('maExplorerBarsValue').textContent=bars;const market=getMarket(.68),p={maWindow:win,basePct:band,stdMult:1.2,atrMult:1.3,confirmation:1,upperPct:band,lowerPct:band,dynamicStrength:1.2},r=computeVariant('percent',market,p);drawVariant(canvas,market,r,bars);document.getElementById('maExplorerStats').innerHTML=statHtml(r);}
+if(document.getElementById('maExplorerCanvas'))['maExplorerWindow','maExplorerBand','maExplorerBars'].forEach(id=>document.getElementById(id).addEventListener('input',updateMaExplorer));updateMaExplorer();
+
+// ---------- Chapter 9: trade-off surface ----------
+function surfaceMetrics(threshold,confirm){const market=getMarket(.68),p={maWindow:48,basePct:threshold,stdMult:1.2,atrMult:1.3,confirmation:confirm,upperPct:threshold,lowerPct:threshold,dynamicStrength:1.2},r=computeVariant(confirm>1?'confirmed':'percent',market,p);const reduction=r.metrics.rawFlips?1-r.metrics.flips/r.metrics.rawFlips:0;const delay=clamp((threshold/.25)+(confirm-1)*.35,0,10);const balance=.55*reduction+.35*r.metrics.continuation-.10*(delay/10);return {reduction,delay,balance,r};}
+function updateSurface(){const canvas=document.getElementById('surfaceCanvas');if(!canvas)return;const selectedT=Number(document.getElementById('surfaceThreshold').value),selectedC=Number(document.getElementById('surfaceConfirm').value),metric=document.getElementById('surfaceMetric').value;document.getElementById('surfaceThresholdValue').textContent=selectedT.toFixed(2)+'%';document.getElementById('surfaceConfirmValue').textContent=selectedC;const {ctx,width,height}=setupCanvas(canvas),cols=10,rows=8,left=55,top=25,w=width-75,h=height-65,cw=w/cols,ch=h/rows;const vals=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const t=.1+c*.2,conf=r+1,m=surfaceMetrics(t,conf),v=metric==='flips'?m.reduction:metric==='delay'?1-clamp(m.delay/10,0,1):m.balance;vals.push(v);}const min=Math.min(...vals),max=Math.max(...vals);let idx=0;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const v=vals[idx++],u=(v-min)/(max-min||1);ctx.fillStyle=`rgba(84,121,138,${.15+.75*u})`;ctx.fillRect(left+c*cw,top+r*ch,cw-2,ch-2);if(Math.abs((.1+c*.2)-selectedT)<.11 && r+1===selectedC){ctx.strokeStyle='#c88d5d';ctx.lineWidth=3;ctx.strokeRect(left+c*cw+1,top+r*ch+1,cw-4,ch-4);}}ctx.fillStyle='#607376';ctx.font='11px system-ui';for(let c=0;c<cols;c+=2)ctx.fillText((.1+c*.2).toFixed(1)+'%',left+c*cw,top+h+18);for(let r=0;r<rows;r++)ctx.fillText(String(r+1),25,top+r*ch+ch/2);ctx.fillText('confirmation bars',4,12);const s=surfaceMetrics(selectedT,selectedC);document.getElementById('surfaceNote').textContent=`Selected configuration: ${(100*s.reduction).toFixed(0)}% raw-flip reduction, ${(100*s.r.metrics.continuation).toFixed(0)}% continuation rate, approximate relative delay ${s.delay.toFixed(1)}. The darkest cell is not automatically the correct trading choice; it only optimizes the selected signal-quality view.`;}
+if(document.getElementById('surfaceCanvas'))['surfaceThreshold','surfaceConfirm','surfaceMetric'].forEach(id=>document.getElementById(id).addEventListener('input',updateSurface));updateSurface();
+
+// ---------- Chapter 10: non-MA ----------
+function updateNonMa(){const canvas=document.getElementById('nonMaCanvas');if(!canvas)return;const family=document.getElementById('nonMaSignal').value,entry=Number(document.getElementById('nonMaEntry').value),exit=Number(document.getElementById('nonMaExit').value);document.getElementById('nonMaEntryValue').textContent=entry.toFixed(2);document.getElementById('nonMaExitValue').textContent=exit.toFixed(2);const m=getMarket(.65),c=m.close,n=c.length;let score,upper,lower,label;
+  if(family==='donchian'){const hi=[null,...rollingMax(m.high,48).slice(0,-1)],lo=[null,...rollingMin(m.low,48).slice(0,-1)];score=c.map((v,i)=>Number.isFinite(hi[i])&&hi[i]>lo[i]?2*(v-lo[i])/(hi[i]-lo[i])-1:null);upper=clamp(.45*entry,0.2,.98);lower=-clamp(.45*exit,0.05,.9);label='position inside prior rolling channel';}
+  else if(family==='rsi'){score=rsi(c,14).map(v=>Number.isFinite(v)?(50-v)/20:null);upper=entry;lower=-exit;label='mean-reversion pressure from centered RSI';}
+  else{const ret=c.map((v,i)=>i?Math.log(v/c[i-1]):0),rv=rollingStd(ret,48),base=[null,...rollingMedian(rv.map(v=>v||0),288).slice(0,-1)];score=rv.map((v,i)=>Number.isFinite(v)&&base[i]>0?v/base[i]-1:null);upper=.25*entry;lower=-.20*exit;label='relative realized-volatility regime';}
+  const states=schmittSeries(score,upper,lower,1),start=n-420,view=score.slice(start),st=states.slice(start),finite=view.filter(Number.isFinite),min=Math.min(lower-.3,...finite),max=Math.max(upper+.3,...finite);const {ctx,width,height}=setupCanvas(canvas),x0=45,w=width-58,top=22,h=height-105,stateTop=height-58,stateH=35,mapX=i=>x0+w*i/(view.length-1),mapY=v=>top+h*(max-v)/(max-min);drawAxes(ctx,x0,top,w,h,min,max,label);drawLine(ctx,view,mapX,mapY,'#54798a',1.8);ctx.strokeStyle='#c88d5d';ctx.setLineDash([5,4]);[upper,lower].forEach(v=>{ctx.beginPath();ctx.moveTo(x0,mapY(v));ctx.lineTo(x0+w,mapY(v));ctx.stroke();});ctx.setLineDash([]);const stateY=v=>stateTop+stateH*(1-v)/2;drawLine(ctx,st,mapX,stateY,'#789b83',2.6);const raw=view.map(v=>Number.isFinite(v)?(v>=0?1:-1):0),r={metrics:{events:transitionPositions(states).length,flips:countFlips(states),rawFlips:countFlips(raw),quick:quickReversals(states,8),medianDuration:median(stateDurations(states)),continuation:continuationRate(c,states,12,0)}};document.getElementById('nonMaStats').innerHTML=statHtml(r);}
+if(document.getElementById('nonMaCanvas'))['nonMaSignal','nonMaEntry','nonMaExit'].forEach(id=>document.getElementById(id).addEventListener('input',updateNonMa));updateNonMa();
+
+// ---------- Chapter 11: objective ----------
+const candidatePoints=Array.from({length:45},(_,i)=>{const r=seededRandom(700+i),t=.08+i*.045;return {t,cont:clamp(.48+.22*Math.sin(i*.25)+.08*r(),.2,.88),rev:clamp(.48-.30*Math.tanh((t-.45)*2)+.08*r(),.03,.72),noise:clamp(.18+.72*(1-Math.exp(-t*1.8)),.1,.94),events:clamp(1-t/2.5,.08,1)};});
+function updateObjective(){const canvas=document.getElementById('objectiveCanvas');if(!canvas)return;const ws=['wCont','wRev','wNoise','wEvents'].map(id=>Number(document.getElementById(id).value));['wContValue','wRevValue','wNoiseValue','wEventsValue'].forEach((id,i)=>document.getElementById(id).textContent=ws[i]+'%');const sum=ws.reduce((a,b)=>a+b,0)||1;candidatePoints.forEach(p=>p.score=(ws[0]*p.cont+ws[1]*(1-p.rev)+ws[2]*p.noise+ws[3]*p.events)/sum);const best=[...candidatePoints].sort((a,b)=>b.score-a.score)[0];const {ctx,width,height}=setupCanvas(canvas),x0=50,w=width-70,top=25,h=height-65,mapX=v=>x0+w*v,mapY=v=>top+h*(1-v);drawAxes(ctx,x0,top,w,h,0,1,'continuation ↑ versus quick-reversal rate →');ctx.fillStyle='#718184';ctx.fillText('quick reversal rate',x0+w/2,height-10);candidatePoints.forEach(p=>{ctx.fillStyle=p===best?'#c88d5d':`rgba(84,121,138,${.25+.65*p.score})`;ctx.beginPath();ctx.arc(mapX(p.rev),mapY(p.cont),p===best?6:4,0,Math.PI*2);ctx.fill();});document.getElementById('objectiveNote').textContent=`Current scalar objective selects threshold ≈ ${best.t.toFixed(2)} with score ${best.score.toFixed(3)}. A different weight set can choose another point without any data changing; record the objective before optimization.`;}
+if(document.getElementById('objectiveCanvas'))['wCont','wRev','wNoise','wEvents'].forEach(id=>document.getElementById(id).addEventListener('input',updateObjective));updateObjective();
+
+// ---------- Chapter 12: walk-forward ----------
+function updateWalkForward(){const canvas=document.getElementById('walkForwardCanvas');if(!canvas)return;const folds=Number(document.getElementById('wfFolds').value),trials=Number(document.getElementById('wfTrials').value),style=document.getElementById('wfStyle').value;document.getElementById('wfFoldsValue').textContent=folds;document.getElementById('wfTrialsValue').textContent=trials;const {ctx,width,height}=setupCanvas(canvas),left=60,right=20,top=35,rowH=(height-70)/folds,w=width-left-right,segments=folds+3;ctx.font='11px system-ui';for(let f=0;f<folds;f++){const trainStart=style==='expanding'?0:f,trainEnd=f+3,test=f+3;for(let s=0;s<segments;s++){const x=left+s*w/segments,y=top+f*rowH;ctx.fillStyle=s>=trainStart&&s<trainEnd?'#dbe8e3':s===test?'#dce8ee':'#f1f3f2';ctx.fillRect(x+1,y,w/segments-3,rowH-7);}ctx.fillStyle='#5f7477';ctx.fillText(`Fold ${f+1}`,8,top+f*rowH+16);ctx.fillStyle='#47695c';ctx.fillText(`${trials} trials`,left+5,top+f*rowH+16);}ctx.fillStyle='#607376';ctx.fillText('green = Optuna training/validation only · blue = frozen unseen test',left,height-10);const trainShare=style==='expanding'?(folds+2)/(folds+3):3/(folds+3);document.getElementById('walkForwardStats').innerHTML=`<div class="viz-stat"><strong>${folds}</strong><small>unseen test blocks</small></div><div class="viz-stat"><strong>${folds*trials}</strong><small>total trials</small></div><div class="viz-stat"><strong>${style}</strong><small>training window</small></div><div class="viz-stat"><strong>${(100*trainShare).toFixed(0)}%</strong><small>typical train share</small></div><div class="viz-stat"><strong>0</strong><small>test-fold tuning steps</small></div>`;}
+if(document.getElementById('walkForwardCanvas'))['wfFolds','wfTrials','wfStyle'].forEach(id=>document.getElementById(id).addEventListener('input',updateWalkForward));updateWalkForward();
+
+// ---------- Chapter 13: backtest ----------
+function updateBacktest(){const canvas=document.getElementById('backtestCanvas');if(!canvas)return;const fee=Number(document.getElementById('feeSlider').value),slip=Number(document.getElementById('slippageSlider').value),delay=Number(document.getElementById('delaySlider').value);document.getElementById('feeValue').textContent=fee+' bps';document.getElementById('slippageValue').textContent=slip+' bps';document.getElementById('delayValue').textContent=delay+(delay===1?' bar':' bars');const m=getMarket(.64),p={maWindow:48,basePct:.5,stdMult:1.2,atrMult:1.3,confirmation:2,upperPct:.5,lowerPct:.5,dynamicStrength:1.2},r=computeVariant('confirmed',m,p),n=m.close.length,start=n-900,gross=[1],net=[1];let trades=0;for(let i=start+1;i<n;i++){const posIdx=Math.max(start,i-1-delay),pos=r.states[posIdx]||0,ret=m.close[i]/m.close[i-1]-1;gross.push(gross[gross.length-1]*(1+pos*ret));const prev=r.states[Math.max(start,posIdx-1)]||0,turn=Math.abs(pos-prev);if(turn)trades+=turn;const cost=turn*(fee+slip)/10000;net.push(net[net.length-1]*(1+pos*ret-cost));}const {ctx,width,height}=setupCanvas(canvas),x0=48,w=width-60,top=20,h=height-55,all=[...gross,...net],min=Math.min(...all),max=Math.max(...all),mapX=i=>x0+w*i/(gross.length-1),mapY=v=>top+h*(max-v)/(max-min||1);drawAxes(ctx,x0,top,w,h,min,max,'equity multiple');drawLine(ctx,gross,mapX,mapY,'#789b83',1.8);drawLine(ctx,net,mapX,mapY,'#54798a',2.2);document.getElementById('backtestStats').innerHTML=`<div class="viz-stat"><strong>${(100*(gross.at(-1)-1)).toFixed(1)}%</strong><small>gross return</small></div><div class="viz-stat"><strong>${(100*(net.at(-1)-1)).toFixed(1)}%</strong><small>net return</small></div><div class="viz-stat"><strong>${trades.toFixed(0)}</strong><small>position turnover units</small></div><div class="viz-stat"><strong>${fee+slip} bps</strong><small>one-side friction</small></div><div class="viz-stat"><strong>${delay}</strong><small>execution delay</small></div>`;}
+if(document.getElementById('backtestCanvas'))['feeSlider','slippageSlider','delaySlider'].forEach(id=>document.getElementById(id).addEventListener('input',updateBacktest));updateBacktest();
+
+// ---------- Chapter 14: diagnostics ----------
+let failureMode='chatter';
+function updateFailure(){const canvas=document.getElementById('failureCanvas');if(!canvas)return;const {ctx,width,height}=setupCanvas(canvas),x0=45,w=width-60,top=22,h=height-55,n=300,mapX=i=>x0+w*i/(n-1);let a=[],b=[],note='';if(failureMode==='chatter'){a=Array.from({length:n},(_,i)=>.16*Math.sin(i*.9)+.07*Math.sin(i*2.4));b=schmittSeries(a,.18,-.18,1);note='Many zero-line crossings disappear when the state retains memory inside the band.';}else if(failureMode==='lag'){a=Array.from({length:n},(_,i)=>i<130?-.5:(i-130)/45-.5);b=schmittSeries(a,.35,-.35,4);note='A wider band plus confirmation rejects noise but detects the new state later.';}else if(failureMode==='regime'){a=Array.from({length:n},(_,i)=>(i<150?.12:.42)*Math.sin(i*.5));const up=a.map((_,i)=>i<150?.18:.55);b=schmittSeries(a,up,up.map(v=>-v),1);note='A fixed threshold can be too wide in calm periods and too narrow in volatile periods; adaptive width targets this problem.';}else{a=Array.from({length:n},(_,i)=>Math.sin(i*.07)+.15*Math.sin(i*.8));b=a.map((v,i)=>i<35||i>n-35?null:v);note='Rolling filters and wavelets have incomplete information at the beginning and often at the end. Boundary observations need explicit handling.';}const finite=a.filter(Number.isFinite),min=Math.min(-1,...finite),max=Math.max(1,...finite),mapY=v=>top+h*(max-v)/(max-min);drawAxes(ctx,x0,top,w,h,min,max,failureMode);drawLine(ctx,a,mapX,mapY,'#54798a',1.8);if(failureMode==='boundary'){ctx.fillStyle='rgba(166,93,97,.12)';ctx.fillRect(x0,top,w*35/n,h);ctx.fillRect(x0+w*(n-35)/n,top,w*35/n,h);}else{const stateY=v=>top+h*(max-(v*.65))/(max-min);drawLine(ctx,b,mapX,stateY,'#789b83',2.4);}document.getElementById('failureNote').textContent=note;}
+if(document.getElementById('failureModes'))document.querySelectorAll('#failureModes .toggle-chip').forEach(b=>b.addEventListener('click',()=>{failureMode=b.dataset.mode;document.querySelectorAll('#failureModes .toggle-chip').forEach(x=>x.classList.toggle('active',x===b));updateFailure();}));updateFailure();
+
+// ---------- Chapter 15: roadmap ----------
+function updateRoadmap(){const canvas=document.getElementById('roadmapCanvas');if(!canvas)return;const boxes=[...document.querySelectorAll('#roadmapGrid input')],done=boxes.map(b=>b.checked);boxes.forEach((b,i)=>b.closest('.roadmap-phase').classList.toggle('done',b.checked));const {ctx,width,height}=setupCanvas(canvas),left=28,w=width-56,y=75,r=18;for(let i=0;i<4;i++){const x=left+i*w/3;if(i<3){ctx.strokeStyle=done[i]?'#789b83':'#d4dfdc';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(left+(i+1)*w/3-r,y);ctx.stroke();}ctx.fillStyle=done[i]?'#789b83':'#edf2f0';ctx.strokeStyle=done[i]?'#54798a':'#cbd8d4';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=done[i]?'white':'#607376';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText(String(i+1),x,y+4);}const complete=done.filter(Boolean).length;const next=complete<4?['data validation','baseline metrics','walk-forward optimization','advanced variants'][complete]:'independent replication';document.getElementById('roadmapNote').textContent=`${complete} of 4 phases marked complete. Next focus: ${next}. Do not treat later adaptive models as valid before the earlier validation gates are reproducible.`;}
+if(document.getElementById('roadmapGrid'))document.querySelectorAll('#roadmapGrid input').forEach(b=>b.addEventListener('change',updateRoadmap));updateRoadmap();
+
+// ---------- Chapter 16: concept check ----------
+const quizCorrect={hysteresis:'1',leakage:'4',chatter:'5',walkforward:'1',contaminant:'2'};
+const quizText={hysteresis:'Correct: hysteresis combines separate switching levels with retained state.',leakage:'Correct: leakage means current decisions or validation use information that would not have been available then.',chatter:'Correct: chatter is rapid repeated switching near a decision boundary.',walkforward:'Walk-forward validation is chronological training, parameter freezing, then evaluation on the next unseen block. The closest listed principle is the stateful/ordered rule; random shuffling is wrong.',contaminant:'A contaminant is erroneous or corrupted data. A genuine extreme market move can be an outlier without being a contaminant.'};
+function drawConcept(){const canvas=document.getElementById('conceptCanvas');if(!canvas)return;const concept=document.getElementById('quizConcept').value,{ctx,width,height}=setupCanvas(canvas),cx=width/2,cy=height/2;const nodes={hysteresis:['score','upper/lower','memory','stable state'],leakage:['future data','feature','optimization','test contamination'],chatter:['boundary','noise','rapid flips','turnover'],walkforward:['past train','freeze','next test','repeat'],contaminant:['valid extreme','vendor error','repair rule','audit trail']}[concept];nodes.forEach((label,i)=>{const angle=2*Math.PI*i/nodes.length-Math.PI/2,x=cx+Math.cos(angle)*Math.min(150,width*.28),y=cy+Math.sin(angle)*70;ctx.strokeStyle='#cbdad5';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke();ctx.fillStyle='#eef4f2';ctx.strokeStyle='#aebfba';ctx.beginPath();ctx.roundRect(x-48,y-15,96,30,9);ctx.fill();ctx.stroke();ctx.fillStyle='#52686a';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(label,x,y+4);});ctx.fillStyle='#dce8ee';ctx.beginPath();ctx.arc(cx,cy,33,0,Math.PI*2);ctx.fill();ctx.fillStyle='#40595d';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText(concept,cx,cy+4);}
+if(document.getElementById('quizCheck')){document.getElementById('quizCheck').addEventListener('click',()=>{const c=document.getElementById('quizConcept').value,a=document.getElementById('quizAnswer').value,ok=a===quizCorrect[c]||(c==='walkforward'&&a==='1');const box=document.getElementById('quizResult');box.style.background=ok?'#edf5ef':'#f8eded';box.textContent=(ok?'✓ ':'Not quite. ')+quizText[c];});document.getElementById('quizConcept').addEventListener('input',drawConcept);}drawConcept();
+
+// Redraw canvases when their responsive widths change.
+let resizeTimer;
+window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{updateVariantLab();updatePipeline();updateResearch();updateStack();updatePagination();updateQuality();updateContract();updateMaExplorer();updateSurface();updateNonMa();updateObjective();updateWalkForward();updateBacktest();updateFailure();updateRoadmap();drawConcept();},120);});
+
+</script>
+</body>
+</html>
