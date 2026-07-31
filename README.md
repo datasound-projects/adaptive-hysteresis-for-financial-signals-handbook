@@ -10,7 +10,8 @@ In Giller’s framework, transaction costs split a single decision threshold int
 
 > **Implementation note:** The use of static, adaptive, symmetric, or asymmetric thresholds—and their estimation from ATR, realized volatility, rolling standard deviation, or other volatility features—is an extension of Giller’s core hysteresis concept. These specific threshold-construction methods are not prescribed directly in the cited sections.
 
-#
+
+
 #
 ## Schmitt Trigger for Robust Trading Signal Generation
 
